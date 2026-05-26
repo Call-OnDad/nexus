@@ -1,0 +1,32 @@
+## NEXUS — gitignore
+
+# User-specific config (contains your server IPs and domain — do not commit)
+pwa/config.js
+
+# Capacitor build outputs
+capacitor/android/
+capacitor/node_modules/
+capacitor/.cache/
+
+# PWA build deps
+pwa/node_modules/
+pwa/package-lock.json
+
+# Expo build outputs
+expo/.expo/
+expo/dist/
+expo/node_modules/
+
+# Electron
+desktop/node_modules/
+desktop/dist/
+
+# IDE
+.idea/
+.vscode/
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log

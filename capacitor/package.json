@@ -1,0 +1,20 @@
+{
+  "name": "nexus-capacitor",
+  "version": "1.0.0",
+  "description": "NEXUS home intelligence app — Capacitor Android wrapper",
+  "scripts": {
+    "sync":   "cap sync android",
+    "open":   "cap open android",
+    "build":  "cap sync android && cap open android",
+    "icons":  "node ../pwa/generate-icons.js"
+  },
+  "dependencies": {
+    "@capacitor/android":  "^6.2.0",
+    "@capacitor/core":     "^6.2.0",
+    "@capacitor/haptics":  "^6.0.3",
+    "@capacitor/browser":  "^6.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.0"
+  }
+}

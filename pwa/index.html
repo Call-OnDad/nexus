@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#07070F">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>NEXUS</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <span class="header-title">NEXUS</span>
+      <button id="toggle-btn" class="toggle-btn" title="Toggle keyboard input">⌨️</button>
+    </header>
+
+    <div id="messages" class="messages">
+      <div id="empty-state" class="empty-state">
+        <p class="empty-title">NEXUS is listening.</p>
+        <p class="empty-sub">Tap the orb and speak, or type below.</p>
+      </div>
+    </div>
+
+    <div class="orb-area">
+      <div class="orb-container">
+        <div id="orb-ring" class="orb-ring idle">
+          <button id="orb-btn" class="orb-btn" aria-label="Voice input">
+            <span class="orb-letter">N</span>
+          </button>
+        </div>
+        <span id="orb-label" class="orb-label">TAP TO SPEAK</span>
+      </div>
+    </div>
+
+    <div id="text-area" class="text-area hidden">
+      <input
+        id="text-input"
+        class="text-input"
+        type="text"
+        placeholder="Type a message..."
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+      >
+      <button id="send-btn" class="send-btn">▶</button>
+    </div>
+  </div>
+
+  <div id="loader" class="loader">
+    <div class="loader-spinner"></div>
+    <p class="loader-text">Connecting to NEXUS...</p>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

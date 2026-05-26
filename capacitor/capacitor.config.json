@@ -1,0 +1,18 @@
+{
+  "appId": "media.callon.nexus",
+  "appName": "NEXUS",
+  "webDir": "../pwa",
+  "server": {
+    "cleartext": true,
+    "allowNavigation": ["192.168.0.60", "nexus.call-on.media"]
+  },
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#07070F"
+  },
+  "plugins": {
+    "Microphone": {
+      "permissionText": "NEXUS needs your microphone to hear your voice commands."
+    }
+  }
+}
