@@ -1,5 +1,10 @@
-const CACHE = 'nexus-v1';
-const SHELL = ['./index.html', './style.css', './app.js', './manifest.json'];
+const CACHE = 'nexus-v2';
+const SHELL = [
+  './index.html', './style.css',
+  './app-native.html', './style-native.css',
+  './app.js', './config.js', './manifest.json',
+  './icons/icon-192.png', './icons/icon-512.png',
+];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
