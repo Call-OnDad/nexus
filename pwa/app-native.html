@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#07070F">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>NEXUS</title>
+  <link rel="stylesheet" href="style-native.css">
+</head>
+<body>
+
+  <div class="stars" aria-hidden="true"></div>
+
+  <!-- Safe-area shell -->
+  <div class="app-shell">
+
+    <!-- ── STATUS BAR ─────────────────────────────────── -->
+    <div class="status-bar">
+      <span class="logo-mark">N<em>E</em>XUS</span>
+      <div class="status-dots">
+        <span class="sdot sdot-green"  id="api-dot" title="API"></span>
+        <span class="sdot sdot-blue"   id="ha-dot"  title="HA"></span>
+        <span class="sdot sdot-purple" id="tts-dot" title="TTS"></span>
+      </div>
+      <span id="clock" class="clock-mark">--:--</span>
+    </div>
+
+    <!-- ── ORB ZONE ───────────────────────────────────── -->
+    <div class="orb-zone">
+      <div class="orb-ring r1" aria-hidden="true"></div>
+      <div class="orb-ring r2" aria-hidden="true"></div>
+      <div class="orb-scan"   aria-hidden="true"></div>
+      <button class="orb-btn" id="orb-btn" aria-label="Activate NEXUS voice input">
+        <svg class="orb-constellation" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <g fill="none">
+            <line x1="50" y1="19" x2="29" y2="44" stroke="rgba(0,180,255,0.45)" stroke-width="1"/>
+            <line x1="50" y1="19" x2="71" y2="44" stroke="rgba(0,180,255,0.45)" stroke-width="1"/>
+            <line x1="29" y1="44" x2="20" y2="67" stroke="rgba(0,180,255,0.32)" stroke-width="0.9"/>
+            <line x1="71" y1="44" x2="80" y2="67" stroke="rgba(0,180,255,0.32)" stroke-width="0.9"/>
+            <line x1="20" y1="67" x2="50" y2="78" stroke="rgba(0,180,255,0.25)" stroke-width="0.8"/>
+            <line x1="80" y1="67" x2="50" y2="78" stroke="rgba(0,180,255,0.25)" stroke-width="0.8"/>
+            <line x1="29" y1="44" x2="71" y2="44" stroke="rgba(0,180,255,0.2)"  stroke-width="0.7"/>
+            <line x1="29" y1="44" x2="61" y2="57" stroke="rgba(0,180,255,0.2)"  stroke-width="0.6"/>
+            <line x1="71" y1="44" x2="39" y2="57" stroke="rgba(0,180,255,0.2)"  stroke-width="0.6"/>
+            <line x1="39" y1="57" x2="50" y2="78" stroke="rgba(0,180,255,0.18)" stroke-width="0.6"/>
+            <line x1="61" y1="57" x2="50" y2="78" stroke="rgba(0,180,255,0.18)" stroke-width="0.6"/>
+          </g>
+          <circle cx="50" cy="19" r="2.1"  fill="rgba(0,210,255,0.8)"/>
+          <circle cx="20" cy="67" r="1.7"  fill="rgba(0,210,255,0.65)"/>
+          <circle cx="80" cy="67" r="1.7"  fill="rgba(0,210,255,0.65)"/>
+          <circle cx="50" cy="78" r="1.9"  fill="rgba(0,210,255,0.7)"/>
+          <circle cx="39" cy="57" r="1.4"  fill="rgba(0,210,255,0.55)"/>
+          <circle cx="61" cy="57" r="1.4"  fill="rgba(0,210,255,0.55)"/>
+          <circle cx="29" cy="44" r="5"    fill="rgba(255,185,0,0.14)"/>
+          <circle cx="29" cy="44" r="3.1"  fill="#ffc800"/>
+          <circle cx="71" cy="44" r="5"    fill="rgba(255,185,0,0.14)"/>
+          <circle cx="71" cy="44" r="3.1"  fill="#ffc800"/>
+        </svg>
+      </button>
+      <div class="orb-status" id="orb-status">READY</div>
+    </div>
+
+    <!-- ── DEPARTMENT STRIP (horizontal scroll) ─────── -->
+    <div class="service-strip-wrap">
+      <div class="service-strip" id="bubbles-layer" aria-label="Department bubbles">
+
+        <button class="bubble" id="node-nexus"
+          data-dept="nexus" data-label="NEXUS AI" data-detail="nexus"
+          style="--accent:#00d4ff" aria-label="NEXUS AI">
+          <span class="bubble-icon" aria-hidden="true">🧠</span>
+          <span class="bubble-label">NEXUS</span>
+          <span class="bubble-dot" id="dot-nexus"></span>
+        </button>
+
+        <button class="bubble" id="node-infra"
+          data-dept="infra" data-label="DEV / INFRA" data-detail="infra"
+          style="--accent:#00ff88" aria-label="Dev and Infrastructure">
+          <span class="bubble-icon" aria-hidden="true">🖥</span>
+          <span class="bubble-label">INFRA</span>
+          <span class="bubble-dot" id="dot-infra"></span>
+        </button>
+
+        <button class="bubble" id="node-marketing"
+          data-dept="marketing" data-label="MARKETING" data-detail="marketing"
+          style="--accent:#ff3399" aria-label="Marketing">
+          <span class="bubble-icon" aria-hidden="true">📣</span>
+          <span class="bubble-label">MKTG</span>
+          <span class="bubble-dot" id="dot-marketing"></span>
+        </button>
+
+        <button class="bubble" id="node-business"
+          data-dept="business" data-label="BUSINESS" data-detail="business"
+          style="--accent:#ffc800" aria-label="Business">
+          <span class="bubble-icon" aria-hidden="true">💼</span>
+          <span class="bubble-label">BIZ</span>
+          <span class="bubble-dot" id="dot-business"></span>
+        </button>
+
+        <button class="bubble" id="node-community"
+          data-dept="community" data-label="COMMUNITY" data-detail="community"
+          style="--accent:#7c3aed" aria-label="Community">
+          <span class="bubble-icon" aria-hidden="true">👥</span>
+          <span class="bubble-label">COMM</span>
+          <span class="bubble-dot" id="dot-community"></span>
+        </button>
+
+        <button class="bubble" id="node-security"
+          data-dept="security" data-label="SECURITY" data-detail="security"
+          style="--accent:#ff4d4d" aria-label="Security">
+          <span class="bubble-icon" aria-hidden="true">🛡</span>
+          <span class="bubble-label">SEC</span>
+          <span class="bubble-dot" id="dot-security"></span>
+        </button>
+
+        <button class="bubble" id="node-email"
+          data-dept="email" data-label="EMAIL" data-detail="email"
+          style="--accent:#00b4ff" aria-label="Email">
+          <span class="bubble-icon" aria-hidden="true">📧</span>
+          <span class="bubble-label">MAIL</span>
+          <span class="bubble-dot" id="dot-email"></span>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- ── CHAT AREA ──────────────────────────────────── -->
+    <div class="chat-panel open" id="chat-panel" role="log" aria-live="polite" aria-label="NEXUS chat">
+      <div class="chat-scroll" id="chat-scroll">
+        <div class="msg assistant">
+          <span class="msg-who">NEXUS</span>
+          <span class="msg-text">Systems online. How can I assist?</span>
+        </div>
+      </div>
+      <div class="typing-row" id="typing-row" aria-label="NEXUS is thinking">
+        <span class="msg-who">NEXUS</span>
+        <span class="dot-pulse"></span><span class="dot-pulse"></span><span class="dot-pulse"></span>
+      </div>
+    </div>
+
+    <!-- ── INPUT BAR ──────────────────────────────────── -->
+    <div class="input-bar" role="region" aria-label="Message input">
+      <button class="mic-btn"  id="mic-btn"    aria-label="Voice input">🎙</button>
+      <input  type="text"      id="text-input" class="text-field"
+              placeholder="Query NEXUS..." autocomplete="off" spellcheck="false"
+              aria-label="Text input for NEXUS">
+      <button class="send-btn" id="send-btn"   aria-label="Send message">▶</button>
+      <button class="menu-btn" id="menu-btn"   aria-label="Settings">⋮</button>
+    </div>
+
+  </div><!-- /app-shell -->
+
+  <!-- ── SERVICE DETAIL SHEET (slides up, 82% height) ── -->
+  <div class="service-detail" id="service-detail" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="detail-panel" id="detail-panel">
+      <div class="detail-drag">
+        <span class="detail-handle"></span>
+      </div>
+      <div class="detail-header" id="detail-header">
+        <button class="detail-back" id="detail-back" aria-label="Dismiss">← BACK</button>
+        <div class="detail-identity">
+          <span class="detail-icon" id="detail-icon" aria-hidden="true">🏠</span>
+          <span class="detail-name" id="detail-name">SERVICE</span>
+        </div>
+        <div class="detail-hstatus">
+          <span class="detail-hdot" id="detail-hdot"></span>
+          <span class="detail-htext" id="detail-htext">CHECKING</span>
+        </div>
+      </div>
+      <div class="detail-body">
+        <p   class="detail-desc"  id="detail-desc"></p>
+        <div class="detail-grid"  id="detail-grid"></div>
+        <div class="detail-acts"  id="detail-acts"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CONTROLS TRAY ──────────────────────────────── -->
+  <div class="ctrl-tray" id="ctrl-tray" role="menu" aria-label="NEXUS controls">
+    <div class="ctrl-tray-title">// CONTROLS</div>
+    <div class="ctrl-row">
+      <button class="ctrl-btn active" id="tts-btn">🔊 TTS ON</button>
+      <button class="ctrl-btn"        id="overlay-btn">▶ OVERLAY</button>
+    </div>
+    <div class="ctrl-row">
+      <button class="ctrl-btn"             id="wake-btn">🎙 WAKE WORD</button>
+      <button class="ctrl-btn ctrl-danger" id="clear-btn">CLR MEMORY</button>
+    </div>
+  </div>
+
+  <!-- Invisible drag-handle for chat (native always shows chat, no toggle) -->
+  <div id="drag-handle" style="display:none"></div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
