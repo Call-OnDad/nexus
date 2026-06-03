@@ -95,8 +95,8 @@ const DEPARTMENTS_META = {
   },
   business: {
     icon: '💼', accent: '#ffc800',
-    description: 'Business & operations. Discord feed from #business — agent handles ops, finance flags, manager escalations.',
-    loader: 'loadDeptDiscord', channel: 'business', agent: 'business',
+    description: 'Business & operations. Live domain health + Discord feed from #business.',
+    loader: 'loadDeptBusiness', channel: 'business', agent: 'business',
   },
   community: {
     icon: '👥', accent: '#7c3aed',
@@ -105,8 +105,8 @@ const DEPARTMENTS_META = {
   },
   security: {
     icon: '🛡', accent: '#ff4d4d',
-    description: 'Security department. Discord feed from #security — CrowdSec events, fail2ban, suspicious activity.',
-    loader: 'loadDeptDiscord', channel: 'security', agent: 'security',
+    description: 'Security department. Live service health + Discord feed from #security (CrowdSec, fail2ban).',
+    loader: 'loadDeptSecurity', channel: 'security', agent: 'security',
   },
   email: {
     icon: '📧', accent: '#00b4ff',
@@ -340,7 +340,102 @@ async function loadDeptInfra() {
   $detailGrid.innerHTML = html;
 }
 
-// ── Discord-backed dept renderer (marketing/business/security) ────────────
+// ── Business dept renderer (domain status + Discord) ──────────────────────
+async function loadDeptBusiness(meta) {
+  const DOMAINS = ['call-on.dad', 'call-on.mom', 'call-on.media', 'call-on.shop'];
+  const [domains, feed] = await Promise.all([
+    deptApi('/api/domains/status').catch(e => ({ _err: e.message })),
+    deptApi('/api/discord/channel/business').catch(e => ({ error: e.message })),
+  ]);
+  let html = '<div class="dept-section-title">Domains</div>';
+  if (domains._err) {
+    html += `<div class="dept-error">${escHtml(domains._err)}</div>`;
+  } else {
+    html += '<div class="dept-substats">';
+    for (const dom of DOMAINS) {
+      const info = domains[dom] || {};
+      const up = info.status === 'up';
+      const label = up ? `HTTP ${info.code || 200}` : 'DOWN';
+      const cls   = up ? 'up' : 'down';
+      html += `<div class="dept-domain-row ${cls}"><span class="dept-domain-name">${escHtml(dom)}</span><span class="dept-domain-stat">${escHtml(label)}</span></div>`;
+    }
+    html += '</div>';
+  }
+  html += '<div class="dept-section-title">#business activity</div>';
+  if (feed.error) {
+    html += `<div class="dept-error">${escHtml(feed.error)}</div>`;
+  } else {
+    const msgs = (feed.messages || []).slice(0, 6);
+    if (!msgs.length) html += '<div class="dept-empty">No messages.</div>';
+    else html += '<div class="dept-feed">' + msgs.map(m =>
+      `<div class="disc-msg"><span class="disc-author">${escHtml(m.author)}</span><span class="disc-ts">${escHtml(m.ts)}</span><div class="disc-body">${escHtml((m.content||'').slice(0,220))}</div></div>`
+    ).join('') + '</div>';
+  }
+  html += `<div class="dept-send"><input type="text" id="dept-send-input" class="dept-send-input" placeholder="Message #business via business agent..." autocomplete="off"><button type="button" id="dept-send-btn" class="dept-send-btn">SEND</button></div>`;
+  $detailGrid.innerHTML = html;
+  wireDeptSend(meta.channel, meta.agent);
+}
+
+// ── Security dept renderer (service health + Discord) ─────────────────────
+async function loadDeptSecurity(meta) {
+  const [status, feed] = await Promise.all([
+    deptApi('/api/status').catch(e => ({ _err: e.message })),
+    deptApi('/api/discord/channel/security').catch(e => ({ error: e.message })),
+  ]);
+  const SERVICES = ['nexus', 'ha', 'plex', 'n8n', 'pihole'];
+  let html = '<div class="dept-section-title">Service health</div>';
+  if (status._err) {
+    html += `<div class="dept-error">${escHtml(status._err)}</div>`;
+  } else {
+    html += '<div class="dept-substats">';
+    SERVICES.forEach(s => {
+      const up = status[s] === 'up';
+      html += `<div class="dept-domain-row ${up?'up':'down'}"><span class="dept-domain-name">${escHtml(s.toUpperCase())}</span><span class="dept-domain-stat">${up?'UP':'DOWN'}</span></div>`;
+    });
+    html += '</div>';
+  }
+  html += '<div class="dept-section-title">#security activity</div>';
+  if (feed.error) {
+    html += `<div class="dept-error">${escHtml(feed.error)}</div>`;
+  } else {
+    const msgs = (feed.messages || []).slice(0, 6);
+    if (!msgs.length) html += '<div class="dept-empty">No messages.</div>';
+    else html += '<div class="dept-feed">' + msgs.map(m =>
+      `<div class="disc-msg"><span class="disc-author">${escHtml(m.author)}</span><span class="disc-ts">${escHtml(m.ts)}</span><div class="disc-body">${escHtml((m.content||'').slice(0,220))}</div></div>`
+    ).join('') + '</div>';
+  }
+  html += `<div class="dept-send"><input type="text" id="dept-send-input" class="dept-send-input" placeholder="Message #security via security agent..." autocomplete="off"><button type="button" id="dept-send-btn" class="dept-send-btn">SEND</button></div>`;
+  $detailGrid.innerHTML = html;
+  wireDeptSend(meta.channel, meta.agent);
+}
+
+// Shared send wiring used by business/security/discord renderers
+function wireDeptSend(channel, agent) {
+  const $in = document.getElementById('dept-send-input');
+  const $btn = document.getElementById('dept-send-btn');
+  if (!$in || !$btn) return;
+  const send = async () => {
+    const text = ($in.value || '').trim(); if (!text) return;
+    $btn.disabled = true; const orig = $btn.textContent; $btn.textContent = '...';
+    try {
+      const r = await fetch(apiUrl + '/api/agent/' + agent, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text }),
+        signal: AbortSignal.timeout(60000),
+      });
+      const j = await r.json();
+      addMsg('user', text);
+      addMsg('assistant', j.reply || j.error || '(no reply)');
+      $in.value = ''; closeDetail(); openChat();
+    } catch (e) {
+      $btn.textContent = 'ERROR';
+    } finally { $btn.disabled = false; if ($btn.textContent === '...' || $btn.textContent === 'ERROR') $btn.textContent = orig; }
+  };
+  $btn.addEventListener('click', send);
+  $in.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
+}
+
+// ── Discord-backed dept renderer (marketing/manager/dev/content) ──────────
 async function loadDeptDiscord(meta) {
   const channel = meta.channel, agent = meta.agent;
   const d = await deptApi('/api/discord/channel/' + channel).catch(e => ({ error: e.message }));
@@ -357,27 +452,7 @@ async function loadDeptDiscord(meta) {
   // Quick-send row
   html += `<div class="dept-send"><input type="text" id="dept-send-input" class="dept-send-input" placeholder="Message #${escHtml(channel)} via ${escHtml(agent)} agent..." autocomplete="off"><button type="button" id="dept-send-btn" class="dept-send-btn">SEND</button></div>`;
   $detailGrid.innerHTML = html;
-  const $in = document.getElementById('dept-send-input');
-  const $btn = document.getElementById('dept-send-btn');
-  const send = async () => {
-    const text = ($in.value || '').trim(); if (!text) return;
-    $btn.disabled = true; $btn.textContent = '...';
-    try {
-      const r = await fetch(apiUrl + '/api/agent/' + agent, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text }),
-        signal: AbortSignal.timeout(60000),
-      });
-      const j = await r.json();
-      addMsg('user', text);
-      addMsg('assistant', j.reply || j.error || '(no reply)');
-      $in.value = ''; closeDetail(); openChat();
-    } catch (e) {
-      $btn.textContent = 'ERROR';
-    } finally { $btn.disabled = false; if ($btn.textContent === '...') $btn.textContent = 'SEND'; }
-  };
-  if ($btn) $btn.addEventListener('click', send);
-  if ($in)  $in.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
+  wireDeptSend(channel, agent);
 }
 
 // ── Community dept renderer ───────────────────────────────────────────────
@@ -734,23 +809,42 @@ window.__nexusWakeWord = async function () {
 let overlayActive = false;
 async function toggleOverlay() {
   if (!IS_NATIVE) {
-    addMsg('assistant', 'Overlay only works on the Android native app.');
+    addMsg('assistant', 'Overlay only works inside the Android app.');
     return;
   }
   const FW = window.Capacitor.Plugins && window.Capacitor.Plugins.FloatingWindow;
-  if (!FW) return;
-  if (overlayActive) {
-    await FW.stop(); overlayActive = false;
-    if ($overlayBtn) { $overlayBtn.textContent = '▶ OVERLAY'; $overlayBtn.classList.remove('active'); }
-  } else {
+  if (!FW) { addMsg('assistant', 'FloatingWindow plugin not loaded — APK build is missing the native module.'); return; }
+  try {
+    if (overlayActive) {
+      const r = await FW.stop();
+      console.log('[overlay] stop:', r);
+      overlayActive = false;
+      if ($overlayBtn) { $overlayBtn.textContent = '▶ OVERLAY'; $overlayBtn.classList.remove('active'); }
+      return;
+    }
+    // Always check perm first — clearer than relying on start()'s return code
+    const perm = await FW.hasPermission().catch(() => ({ granted: false }));
+    if (!perm.granted) {
+      addMsg('assistant', 'Settings will open: toggle "Display over other apps" ON for NEXUS, then come back and tap OVERLAY again.');
+    }
     const res = await FW.start();
+    console.log('[overlay] start:', res);
     if (res.status === 'permission_required') {
-      addMsg('assistant', 'Enable "Display over other apps" for NEXUS in Settings, then try again.');
-    } else {
+      // Settings just opened; nothing to do until user grants + retries
+      closeMenu();
+      return;
+    }
+    if (res.status === 'started') {
       overlayActive = true;
       if ($overlayBtn) { $overlayBtn.textContent = '⏸ OVERLAY ON'; $overlayBtn.classList.add('active'); }
+      addMsg('assistant', 'Overlay live. The floating N orb is now on screen — drag it anywhere.');
       closeMenu();
+    } else {
+      addMsg('assistant', 'Overlay start returned: ' + JSON.stringify(res));
     }
+  } catch (e) {
+    console.warn('[overlay] failed:', e);
+    addMsg('assistant', 'Overlay failed: ' + (e && e.message || e));
   }
 }
 

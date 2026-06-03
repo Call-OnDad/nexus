@@ -113,13 +113,19 @@ html, body {
   width:  calc(var(--orb) + 12px);
   height: calc(var(--orb) + 12px);
   border-radius: 50%;
+  border: 1px solid rgba(0,212,255,.18);
+  /* idle: stationary; only rotates while orb is thinking */
+  opacity: .25;
+  pointer-events: none;
+}
+.orb-btn.thinking ~ .orb-scan,
+.orb-zone:has(.orb-btn.thinking) .orb-scan {
   border-top: 1.5px solid var(--cyan);
   border-right: 1.5px solid transparent;
   border-bottom: 1.5px solid transparent;
   border-left: 1.5px solid transparent;
-  animation: spin 6s linear infinite;
-  opacity: .2;
-  pointer-events: none;
+  animation: spin 2s linear infinite;
+  opacity: .85;
 }
 
 .orb-btn {
@@ -153,11 +159,28 @@ html, body {
 }
 
 .orb-status {
+  /* Sits above the orb so bubbles in the bottom of the ring don't cover it */
   position: absolute;
-  bottom: 8px;
-  font-size: .5rem; letter-spacing: 5px;
-  color: rgba(0,212,255,.35);
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(5,12,38,.7);
+  border: 1px solid rgba(0,212,255,.18);
+  font-size: .55rem; letter-spacing: 4px;
+  color: rgba(0,212,255,.7);
+  white-space: nowrap;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
+.orb-btn.thinking ~ .orb-status,
+.orb-zone:has(.orb-btn.thinking) .orb-status { color: #ffb800; border-color: rgba(255,184,0,.6); }
+.orb-btn.listening ~ .orb-status,
+.orb-zone:has(.orb-btn.listening) .orb-status { color: #00ff88; border-color: rgba(0,255,136,.6); }
+.orb-btn.speaking ~ .orb-status,
+.orb-zone:has(.orb-btn.speaking) .orb-status { color: #c084fc; border-color: rgba(192,132,252,.6); }
 
 /* ── DEPARTMENT CONSTELLATION (radial around orb) ───── */
 .dept-constellation {
@@ -194,8 +217,7 @@ html, body {
     rotate(var(--ang, 0deg))
     translateY(calc(-1 * var(--r)))
     rotate(calc(-1 * var(--ang, 0deg)));
-  animation: deptDrift 7s ease-in-out infinite;
-  animation-delay: var(--drift, 0s);
+  /* deptDrift animation removed — was bouncing every bubble; pure CPU/GPU cost for no benefit */
   transition: border-color .25s, box-shadow .25s;
   -webkit-tap-highlight-color: transparent;
   -webkit-backdrop-filter: blur(8px);
@@ -570,6 +592,21 @@ html, body {
 .dept-send-btn:disabled { opacity: .5; cursor: not-allowed; }
 
 .dept-section-title { grid-column: 1/-1; font-size: .55rem; letter-spacing: 3px; color: var(--detail-accent, var(--cyan)); margin-top: 6px; text-transform: uppercase; }
+
+.dept-domain-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 10px; border-radius: 4px;
+  background: rgba(0,212,255,.04);
+  border: 1px solid rgba(0,212,255,.12);
+  border-left: 3px solid rgba(255,255,255,.12);
+  font-size: .65rem;
+}
+.dept-domain-row.up   { border-left-color: #00ff88; }
+.dept-domain-row.down { border-left-color: #ff4d4d; }
+.dept-domain-name { color: rgba(255,255,255,.85); letter-spacing: .5px; }
+.dept-domain-stat { font-size: .55rem; letter-spacing: 2px; color: rgba(0,212,255,.6); }
+.dept-domain-row.up   .dept-domain-stat { color: #00ff88; }
+.dept-domain-row.down .dept-domain-stat { color: #ff4d4d; }
 .dept-substats { grid-column: 1/-1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .dept-substats .detail-card { padding: 8px 10px; }
 .dept-substats .detail-card-label { font-size: .38rem; letter-spacing: 2.5px; }
