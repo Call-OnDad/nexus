@@ -33,6 +33,7 @@
 
     <!-- ── ORB ZONE ───────────────────────────────────── -->
     <div class="orb-zone">
+      <svg class="orb-links" id="orb-links" viewBox="0 0 320 320" aria-hidden="true"></svg>
       <div class="orb-ring r1" aria-hidden="true"></div>
       <div class="orb-ring r2" aria-hidden="true"></div>
       <div class="orb-scan"   aria-hidden="true"></div>
@@ -64,63 +65,61 @@
         </svg>
       </button>
       <div class="orb-status" id="orb-status">READY</div>
-    </div>
 
-    <!-- ── DEPARTMENT STRIP (horizontal scroll) ─────── -->
-    <div class="service-strip-wrap">
-      <div class="service-strip" id="bubbles-layer" aria-label="Department bubbles">
+      <!-- ── DEPARTMENT CONSTELLATION (radial around orb) ── -->
+      <div class="dept-constellation" id="bubbles-layer" aria-label="Department bubbles">
 
-        <button class="bubble" id="node-nexus"
+        <button class="bubble dept-orb" id="node-nexus"
           data-dept="nexus" data-label="NEXUS AI" data-detail="nexus"
-          style="--accent:#00d4ff" aria-label="NEXUS AI">
+          style="--accent:#00d4ff;--ang:0deg;--drift:0s" aria-label="NEXUS AI">
           <span class="bubble-icon" aria-hidden="true">🧠</span>
           <span class="bubble-label">NEXUS</span>
           <span class="bubble-dot" id="dot-nexus"></span>
         </button>
 
-        <button class="bubble" id="node-infra"
+        <button class="bubble dept-orb" id="node-infra"
           data-dept="infra" data-label="DEV / INFRA" data-detail="infra"
-          style="--accent:#00ff88" aria-label="Dev and Infrastructure">
+          style="--accent:#00ff88;--ang:51.4deg;--drift:.6s" aria-label="Dev and Infrastructure">
           <span class="bubble-icon" aria-hidden="true">🖥</span>
           <span class="bubble-label">INFRA</span>
           <span class="bubble-dot" id="dot-infra"></span>
         </button>
 
-        <button class="bubble" id="node-marketing"
+        <button class="bubble dept-orb" id="node-marketing"
           data-dept="marketing" data-label="MARKETING" data-detail="marketing"
-          style="--accent:#ff3399" aria-label="Marketing">
+          style="--accent:#ff3399;--ang:102.8deg;--drift:1.2s" aria-label="Marketing">
           <span class="bubble-icon" aria-hidden="true">📣</span>
           <span class="bubble-label">MKTG</span>
           <span class="bubble-dot" id="dot-marketing"></span>
         </button>
 
-        <button class="bubble" id="node-business"
+        <button class="bubble dept-orb" id="node-business"
           data-dept="business" data-label="BUSINESS" data-detail="business"
-          style="--accent:#ffc800" aria-label="Business">
+          style="--accent:#ffc800;--ang:154.2deg;--drift:1.8s" aria-label="Business">
           <span class="bubble-icon" aria-hidden="true">💼</span>
           <span class="bubble-label">BIZ</span>
           <span class="bubble-dot" id="dot-business"></span>
         </button>
 
-        <button class="bubble" id="node-community"
+        <button class="bubble dept-orb" id="node-community"
           data-dept="community" data-label="COMMUNITY" data-detail="community"
-          style="--accent:#7c3aed" aria-label="Community">
+          style="--accent:#7c3aed;--ang:205.7deg;--drift:2.4s" aria-label="Community">
           <span class="bubble-icon" aria-hidden="true">👥</span>
           <span class="bubble-label">COMM</span>
           <span class="bubble-dot" id="dot-community"></span>
         </button>
 
-        <button class="bubble" id="node-security"
+        <button class="bubble dept-orb" id="node-security"
           data-dept="security" data-label="SECURITY" data-detail="security"
-          style="--accent:#ff4d4d" aria-label="Security">
+          style="--accent:#ff4d4d;--ang:257.1deg;--drift:3s" aria-label="Security">
           <span class="bubble-icon" aria-hidden="true">🛡</span>
           <span class="bubble-label">SEC</span>
           <span class="bubble-dot" id="dot-security"></span>
         </button>
 
-        <button class="bubble" id="node-email"
+        <button class="bubble dept-orb" id="node-email"
           data-dept="email" data-label="EMAIL" data-detail="email"
-          style="--accent:#00b4ff" aria-label="Email">
+          style="--accent:#00b4ff;--ang:308.6deg;--drift:3.6s" aria-label="Email">
           <span class="bubble-icon" aria-hidden="true">📧</span>
           <span class="bubble-label">MAIL</span>
           <span class="bubble-dot" id="dot-email"></span>

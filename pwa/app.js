@@ -822,6 +822,32 @@ function drawConstellation() {
   }
 }
 
+// ── Mobile constellation lines (centre orb → each dept bubble) ─────────────
+function drawMobileLinks() {
+  const svg = document.getElementById('orb-links');
+  if (!svg) return;
+  const zone = svg.parentElement;
+  if (!zone) return;
+  const rect = zone.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  if (!W || !H) return;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = '';
+  const cx = W / 2, cy = H / 2;
+  document.querySelectorAll('.dept-constellation .bubble').forEach(b => {
+    const br = b.getBoundingClientRect();
+    const bx = (br.left - rect.left) + br.width / 2;
+    const by = (br.top  - rect.top)  + br.height / 2;
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', cx); line.setAttribute('y1', cy);
+    line.setAttribute('x2', bx); line.setAttribute('y2', by);
+    line.setAttribute('stroke', 'rgba(0,180,255,0.18)');
+    line.setAttribute('stroke-width', '1');
+    line.setAttribute('stroke-dasharray', '3 6');
+    svg.appendChild(line);
+  });
+}
+
 // ── Sidebar service cards ──────────────────────────────────────────────────
 const SVC_CARD_MAP = {};  // detailId -> card element for status updates
 function buildSidebarCards() {
@@ -864,6 +890,7 @@ function updateScale() {
   const s    = Math.min(1.1, Math.max(0.55, vmin / 700));
   document.documentElement.style.setProperty('--s', s);
   drawConstellation();
+  drawMobileLinks();
 }
 
 // ── Bubble click handlers ──────────────────────────────────────────────────
