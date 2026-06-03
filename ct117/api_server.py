@@ -1219,6 +1219,124 @@ def domains_status():
     return jsonify(results)
 
 
+# ── Cloudflare analytics ──────────────────────────────────────────────────────
+
+CF_GRAPHQL    = "https://api.cloudflare.com/client/v4/graphql"
+CF_API_TOKEN  = os.environ.get("CF_API_TOKEN", "")
+CF_ZONES      = {
+    "call-on.dad":   os.environ.get("CF_ZONE_ID_DAD",   ""),
+    "call-on.mom":   os.environ.get("CF_ZONE_ID_MOM",   ""),
+    "call-on.media": os.environ.get("CF_ZONE_ID_MEDIA", ""),
+    "call-on.shop":  os.environ.get("CF_ZONE_ID_SHOP",  ""),
+}
+CF_CACHE_TTL  = 600   # 10 minutes
+
+CF_QUERY = """
+query Zone($zone: String!, $sinceDate: Date!) {
+  viewer {
+    zones(filter: {zoneTag: $zone}) {
+      rollup: httpRequests1dGroups(
+        limit: 1
+        filter: {date_geq: $sinceDate}
+      ) {
+        sum {
+          requests
+          threats
+          countryMap { clientCountryName requests threats }
+        }
+      }
+    }
+  }
+}
+"""
+
+
+def _cf_query_zone(zone_id, since_date):
+    """Run GraphQL for one zone, return dict or {'error': msg}."""
+    if not CF_API_TOKEN or not zone_id:
+        return {"error": "missing CF_API_TOKEN or zone_id"}
+    body = json.dumps({
+        "query": CF_QUERY,
+        "variables": {"zone": zone_id, "sinceDate": since_date},
+    }).encode()
+    req = urllib.request.Request(
+        CF_GRAPHQL,
+        data=body,
+        headers={
+            "Authorization": f"Bearer {CF_API_TOKEN}",
+            "Content-Type":  "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            payload = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        return {"error": f"CF HTTP {e.code}: {e.read()[:200].decode(errors='replace')}"}
+    except Exception as e:
+        return {"error": f"CF query failed: {e}"}
+    if payload.get("errors"):
+        return {"error": "CF errors: " + json.dumps(payload["errors"])[:200]}
+    zones_arr = (payload.get("data", {}).get("viewer", {}).get("zones") or [])
+    if not zones_arr:
+        return {"error": "no zone data returned"}
+    z = zones_arr[0]
+    rollup = (z.get("rollup") or [{}])[0].get("sum") or {}
+    country_map = rollup.get("countryMap") or []
+    # Top countries by requests, top 5
+    countries = sorted(
+        [{"name": c.get("clientCountryName") or "?",
+          "requests": c.get("requests", 0),
+          "threats":  c.get("threats", 0)} for c in country_map],
+        key=lambda c: c["requests"], reverse=True
+    )[:5]
+    return {
+        "requests_24h": rollup.get("requests", 0),
+        "threats_blocked_24h": rollup.get("threats", 0),
+        "top_countries": countries,
+        # top_paths not supported on Free plan — omit / empty
+        "top_paths": [],
+    }
+
+
+def _cf_summary_fresh():
+    """Query all configured zones in parallel, return aggregate."""
+    import concurrent.futures, datetime
+    # httpRequests1dGroups uses Date (YYYY-MM-DD); query yesterday's full day.
+    yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+    out   = {"_since": yesterday, "zones": {}}
+    pending = {name: zid for name, zid in CF_ZONES.items() if zid}
+    if not pending:
+        return {"error": "no CF zone IDs configured", "zones": {}}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(pending)) as ex:
+        futs = {ex.submit(_cf_query_zone, zid, yesterday): name for name, zid in pending.items()}
+        for f in concurrent.futures.as_completed(futs):
+            name = futs[f]
+            try:
+                res = f.result()
+            except Exception as e:
+                res = {"error": f"thread: {e}"}
+            # Tag plan-restricted zones with a friendlier error
+            if "error" in res and "does not have access" in res.get("error", ""):
+                res = {"error": "Free plan — adaptive analytics unavailable", "plan_restricted": True}
+            out["zones"][name] = res
+    return out
+
+
+@app.route("/api/cloudflare/summary")
+def cloudflare_summary():
+    """Per-domain Cloudflare analytics, cached 10 min."""
+    cached = nexus_cache.cache_get("cloudflare_summary")
+    age    = nexus_cache.cache_age("cloudflare_summary")
+    if cached and age is not None and age < CF_CACHE_TTL:
+        return jsonify({"data": cached["data"], "age": round(age)})
+    data = _cf_summary_fresh()
+    if "error" in data and not data.get("zones"):
+        return jsonify({"error": data["error"]}), 503
+    nexus_cache.cache_set("cloudflare_summary", data)
+    return jsonify({"data": data, "age": 0})
+
+
 # ── Whisper transcription ─────────────────────────────────────────────────────
 
 _whisper_model     = None

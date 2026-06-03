@@ -340,11 +340,12 @@ async function loadDeptInfra() {
   $detailGrid.innerHTML = html;
 }
 
-// ── Business dept renderer (domain status + Discord) ──────────────────────
+// ── Business dept renderer (domain status + Cloudflare + Discord) ────────
 async function loadDeptBusiness(meta) {
   const DOMAINS = ['call-on.dad', 'call-on.mom', 'call-on.media', 'call-on.shop'];
-  const [domains, feed] = await Promise.all([
+  const [domains, cf, feed] = await Promise.all([
     deptApi('/api/domains/status').catch(e => ({ _err: e.message })),
+    deptApi('/api/cloudflare/summary').catch(e => ({ _err: e.message })),
     deptApi('/api/discord/channel/business').catch(e => ({ error: e.message })),
   ]);
   let html = '<div class="dept-section-title">Domains</div>';
@@ -360,6 +361,26 @@ async function loadDeptBusiness(meta) {
       html += `<div class="dept-domain-row ${cls}"><span class="dept-domain-name">${escHtml(dom)}</span><span class="dept-domain-stat">${escHtml(label)}</span></div>`;
     }
     html += '</div>';
+  }
+  // Cloudflare per-domain stats
+  html += `<div class="dept-section-title">Cloudflare (24h${cf && cf.data && cf.data._since ? ' · ' + escHtml(cf.data._since) : ''})</div>`;
+  if (cf._err || cf.error) {
+    html += `<div class="dept-error">${escHtml(cf._err || cf.error)}</div>`;
+  } else {
+    const zones = (cf.data && cf.data.zones) || {};
+    for (const dom of DOMAINS) {
+      const z = zones[dom];
+      if (!z) continue;
+      if (z.error) {
+        html += `<div class="dept-cf-row error"><span class="dept-cf-name">${escHtml(dom)}</span><span class="dept-cf-stat">${escHtml(z.error)}</span></div>`;
+        continue;
+      }
+      const top = (z.top_countries || []).slice(0, 3).map(c => `${escHtml(c.name)} ${(c.requests||0).toLocaleString()}`).join(' · ');
+      html += `<div class="dept-cf-row">
+        <div class="dept-cf-head"><span class="dept-cf-name">${escHtml(dom)}</span><span class="dept-cf-req">${(z.requests_24h||0).toLocaleString()} req</span></div>
+        <div class="dept-cf-meta"><span class="dept-cf-threats">⚠ ${z.threats_blocked_24h||0} blocked</span><span class="dept-cf-countries">${top || '—'}</span></div>
+      </div>`;
+    }
   }
   html += '<div class="dept-section-title">#business activity</div>';
   if (feed.error) {

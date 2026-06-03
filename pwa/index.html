@@ -171,6 +171,13 @@
             </div>
             <div class="card card-wide">
               <div class="card-title-row">
+                <div class="card-title">CLOUDFLARE (24H)</div>
+                <span class="cf-since" id="cf-since" style="font-size:.55rem;letter-spacing:2px;color:rgba(255,212,0,.5)"></span>
+              </div>
+              <div class="cf-grid" id="cf-grid"><div class="feed-loading">Loading Cloudflare stats…</div></div>
+            </div>
+            <div class="card card-wide">
+              <div class="card-title-row">
                 <div class="card-title">#BUSINESS ACTIVITY</div>
                 <button class="reload-btn" data-reload="business">↻</button>
               </div>
@@ -508,6 +515,40 @@
     } catch(e) { el.innerHTML = `<div class="feed-error">Failed: ${esc(e.message)}</div>`; }
   }
 
+  // ── Cloudflare 24h ────────────────────────────────────────────────────────
+  async function loadCloudflare() {
+    const el = document.getElementById('cf-grid');
+    const sinceEl = document.getElementById('cf-since');
+    if (!el) return;
+    el.innerHTML = '<div class="feed-loading">Querying Cloudflare…</div>';
+    try {
+      const r = await apiFetch('/api/cloudflare/summary');
+      if (r.error) { el.innerHTML = `<div class="feed-error">${esc(r.error)}</div>`; return; }
+      const zones = (r.data && r.data.zones) || {};
+      if (sinceEl) sinceEl.textContent = r.data._since ? ('since ' + r.data._since) : '';
+      const domains = ['call-on.dad','call-on.mom','call-on.media','call-on.shop'];
+      el.innerHTML = domains.map(dom => {
+        const z = zones[dom];
+        if (!z) return '';
+        if (z.error) {
+          return `<div class="cf-card error"><div class="cf-dom">${esc(dom)}</div><div class="cf-err">${esc(z.error)}</div></div>`;
+        }
+        const top = (z.top_countries || []).slice(0,3)
+          .map(c => `<span class="cf-country">${esc(c.name)} <em>${(c.requests||0).toLocaleString()}</em></span>`).join('');
+        return `<div class="cf-card">
+          <div class="cf-dom">${esc(dom)}</div>
+          <div class="cf-stats">
+            <div class="cf-stat"><span class="cf-label">Requests</span><span class="cf-val">${(z.requests_24h||0).toLocaleString()}</span></div>
+            <div class="cf-stat"><span class="cf-label">Threats blocked</span><span class="cf-val cf-threat">${(z.threats_blocked_24h||0).toLocaleString()}</span></div>
+          </div>
+          <div class="cf-countries">${top || '<span style="opacity:.4">no country data</span>'}</div>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      el.innerHTML = `<div class="feed-error">CF failed: ${esc(e.message)}</div>`;
+    }
+  }
+
   // ── Domain status ─────────────────────────────────────────────────────────
   async function loadDomains() {
     try {
@@ -648,6 +689,7 @@
         break;
       case 'business':
         loadDomains();
+        loadCloudflare();
         loadDiscordFeed('business','feed-business');
         setTimeout(()=>loadDiscordFeed('manager','feed-manager'), 600);
         break;
