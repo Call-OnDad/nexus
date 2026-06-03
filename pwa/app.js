@@ -113,6 +113,21 @@ const DEPARTMENTS_META = {
     description: 'Unified inbox — Gmail + Yahoo, cached every 10 minutes.',
     loader: 'loadDeptEmail',
   },
+  manager: {
+    icon: '🎯', accent: '#a855f7',
+    description: 'Manager agent. Approves <£100, escalates everything else to Antony. Reads #manager Discord channel.',
+    loader: 'loadDeptDiscord', channel: 'manager', agent: 'manager',
+  },
+  dev: {
+    icon: '💻', accent: '#10b981',
+    description: 'Dev agent. Verifies after every change, never touches n8n DB. Reads #dev Discord channel.',
+    loader: 'loadDeptDiscord', channel: 'dev', agent: 'dev',
+  },
+  content: {
+    icon: '✍️', accent: '#f59e0b',
+    description: 'Content agent. UK English, no AI buzzwords. Reads #content Discord channel.',
+    loader: 'loadDeptDiscord', channel: 'content', agent: 'content',
+  },
 };
 
 // ── Prose parsers (Proxmox endpoints return narrative strings) ────────────
@@ -519,16 +534,17 @@ function stopPlayback() {
   if (currentAudio) { currentAudio.pause(); currentAudio.src = ''; currentAudio = null; }
 }
 function speak(b64) {
-  if (!ttsEnabled || !b64) return;
+  if (!ttsEnabled) { console.warn('[speak] skipped: TTS toggle OFF'); return; }
+  if (!b64)        { console.warn('[speak] skipped: empty audio payload'); return; }
   stopPlayback(); unlockAudio();
   try {
     const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
     const url   = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
     currentAudio = new Audio(url);
     currentAudio.onended = () => { URL.revokeObjectURL(url); currentAudio = null; setOrb('idle'); };
-    currentAudio.onerror = () => { currentAudio = null; setOrb('idle'); };
-    currentAudio.play().catch(() => setOrb('idle'));
-  } catch (_) { setOrb('idle'); }
+    currentAudio.onerror = (e) => { console.warn('[speak] audio element error:', e); currentAudio = null; setOrb('idle'); };
+    currentAudio.play().catch(err => { console.warn('[speak] play() rejected:', err && err.message); setOrb('idle'); });
+  } catch (e) { console.warn('[speak] decode failed:', e && e.message); setOrb('idle'); }
 }
 
 // ── Haptics ────────────────────────────────────────────────────────────────

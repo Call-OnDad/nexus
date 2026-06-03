@@ -51,6 +51,9 @@
         <button class="nav-btn"        data-dept="community" aria-pressed="false"><span class="nav-icon">◎</span><span class="nav-label">COMMUNITY</span></button>
         <button class="nav-btn"        data-dept="security"  aria-pressed="false"><span class="nav-icon">⬣</span><span class="nav-label">SECURITY</span></button>
         <button class="nav-btn"        data-dept="email"     aria-pressed="false"><span class="nav-icon">✉</span><span class="nav-label">EMAIL</span></button>
+        <button class="nav-btn"        data-dept="manager"   aria-pressed="false"><span class="nav-icon">◈</span><span class="nav-label">MANAGER</span></button>
+        <button class="nav-btn"        data-dept="dev"       aria-pressed="false"><span class="nav-icon">⌘</span><span class="nav-label">DEV</span></button>
+        <button class="nav-btn"        data-dept="content"   aria-pressed="false"><span class="nav-icon">✎</span><span class="nav-label">CONTENT</span></button>
         <div class="nav-spacer"></div>
         <button class="nav-btn nav-btn-sm" id="refresh-btn"><span class="nav-icon">↻</span><span class="nav-label">REFRESH</span></button>
       </nav>
@@ -291,6 +294,69 @@
                 <button class="shortcut-btn" data-msg="What are the 5 most recent emails?">Recent 5</button>
                 <button class="shortcut-btn" data-msg="Any urgent or important emails needing my attention?">Urgent</button>
                 <button class="shortcut-btn" data-msg="Summarise my emails from the last 24 hours">Last 24h</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- MANAGER ──────────────────────────────── -->
+        <section class="dept-panel hidden" id="dept-manager">
+          <div class="panel-header">
+            <h2 class="panel-title" style="--accent:#a855f7">◈ MANAGER</h2>
+            <span class="panel-sub">Approves &lt;£100 · escalates the rest to Antony</span>
+          </div>
+          <div class="panel-grid">
+            <div class="card card-wide">
+              <div class="card-title-row">
+                <div class="card-title">#MANAGER ACTIVITY</div>
+                <button class="reload-btn" data-reload="manager">↻</button>
+              </div>
+              <div class="disc-feed" id="feed-manager"><div class="feed-loading">Loading channel…</div></div>
+              <div class="disc-compose">
+                <textarea class="discord-input" id="mgr-msg" placeholder="Post to #manager…" rows="2"></textarea>
+                <button class="disc-send-btn" data-channel="manager" data-input="mgr-msg">SEND →</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- DEV ──────────────────────────────────── -->
+        <section class="dept-panel hidden" id="dept-dev">
+          <div class="panel-header">
+            <h2 class="panel-title" style="--accent:#10b981">⌘ DEV</h2>
+            <span class="panel-sub">Verify after every change · never touches n8n DB</span>
+          </div>
+          <div class="panel-grid">
+            <div class="card card-wide">
+              <div class="card-title-row">
+                <div class="card-title">#DEV ACTIVITY</div>
+                <button class="reload-btn" data-reload="dev">↻</button>
+              </div>
+              <div class="disc-feed" id="feed-dev"><div class="feed-loading">Loading channel…</div></div>
+              <div class="disc-compose">
+                <textarea class="discord-input" id="dev-msg" placeholder="Post to #dev…" rows="2"></textarea>
+                <button class="disc-send-btn" data-channel="dev" data-input="dev-msg">SEND →</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CONTENT ──────────────────────────────── -->
+        <section class="dept-panel hidden" id="dept-content">
+          <div class="panel-header">
+            <h2 class="panel-title" style="--accent:#f59e0b">✎ CONTENT</h2>
+            <span class="panel-sub">UK English · no AI buzzwords</span>
+          </div>
+          <div class="panel-grid">
+            <div class="card card-wide">
+              <div class="card-title-row">
+                <div class="card-title">#CONTENT ACTIVITY</div>
+                <button class="reload-btn" data-reload="content-page">↻</button>
+              </div>
+              <div class="disc-feed" id="feed-content-page"><div class="feed-loading">Loading channel…</div></div>
+              <div class="disc-compose">
+                <textarea class="discord-input" id="cnt-msg" placeholder="Post to #content…" rows="2"></textarea>
+                <button class="disc-send-btn" data-channel="content" data-input="cnt-msg">SEND →</button>
               </div>
             </div>
           </div>
@@ -593,6 +659,15 @@
       case 'security':
         loadDiscordFeed('security','feed-security');
         setTimeout(()=>loadDiscordFeed('infra','feed-infra'), 600);
+        break;
+      case 'manager':
+        loadDiscordFeed('manager','feed-manager');
+        break;
+      case 'dev':
+        loadDiscordFeed('dev','feed-dev');
+        break;
+      case 'content':
+        loadDiscordFeed('content','feed-content-page');
         break;
     }
   }
