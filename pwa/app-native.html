@@ -198,11 +198,25 @@
   <script src="config.js"></script>
   <script src="app.js"></script>
   <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW register failed:', err));
-      });
-    }
+    // Inside Capacitor we ship assets bundled — SW just causes stale-cache pain on upgrade.
+    // Unregister any pre-existing SW + nuke caches so an APK refresh actually takes effect.
+    (function () {
+      var inCapacitor = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+      if (inCapacitor) {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); });
+        }
+        if (window.caches && caches.keys) {
+          caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); });
+        }
+        return;
+      }
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('sw.js').catch(function (err) { console.warn('SW register failed:', err); });
+        });
+      }
+    })();
   </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-const CACHE = 'nexus-v2';
+const CACHE = 'nexus-v3';
 const SHELL = [
   './index.html', './style.css',
   './app-native.html', './style-native.css',
