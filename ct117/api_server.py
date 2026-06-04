@@ -1337,6 +1337,141 @@ def cloudflare_summary():
     return jsonify({"data": data, "age": 0})
 
 
+# ── GA4 analytics ─────────────────────────────────────────────────────────────
+
+GA4_PROPERTIES = {
+    "call-on.dad":   os.environ.get("GA4_PROPERTY_ID_DAD",   ""),
+    "call-on.mom":   os.environ.get("GA4_PROPERTY_ID_MOM",   ""),
+    "call-on.media": os.environ.get("GA4_PROPERTY_ID_MEDIA", ""),
+    "call-on.shop":  os.environ.get("GA4_PROPERTY_ID_SHOP",  ""),
+}
+GA4_CACHE_TTL = 600  # 10 minutes
+
+_ga4_client = None
+_ga4_client_err = None
+
+
+def _ga4_get_client():
+    """Lazily build the GA4 client. Cache the import + client between calls."""
+    global _ga4_client, _ga4_client_err
+    if _ga4_client is not None or _ga4_client_err is not None:
+        return _ga4_client, _ga4_client_err
+    try:
+        from google.analytics.data_v1beta import BetaAnalyticsDataClient
+        _ga4_client = BetaAnalyticsDataClient()  # reads GOOGLE_APPLICATION_CREDENTIALS
+    except Exception as e:
+        _ga4_client_err = f"GA4 client init failed: {type(e).__name__}: {e}"
+    return _ga4_client, _ga4_client_err
+
+
+def _ga4_query_property(prop_id):
+    """Run two queries: 24h headline + top countries. Return dict or {'error':...}."""
+    client, err = _ga4_get_client()
+    if err:
+        return {"error": err}
+    try:
+        from google.analytics.data_v1beta.types import (
+            RunReportRequest, DateRange, Dimension, Metric
+        )
+        # Headline: sessions, users, page views, engagement (last 1 day)
+        head_req = RunReportRequest(
+            property=f"properties/{prop_id}",
+            date_ranges=[DateRange(start_date="1daysAgo", end_date="today")],
+            metrics=[
+                Metric(name="sessions"),
+                Metric(name="activeUsers"),
+                Metric(name="screenPageViews"),
+                Metric(name="averageSessionDuration"),
+            ],
+        )
+        head = client.run_report(head_req)
+        head_row = head.rows[0] if head.rows else None
+        def _mv(i):
+            try:
+                return float(head_row.metric_values[i].value) if head_row else 0
+            except Exception:
+                return 0
+        sessions  = int(_mv(0))
+        users     = int(_mv(1))
+        pageviews = int(_mv(2))
+        avg_sess  = round(_mv(3), 1)
+        # Top countries
+        country_req = RunReportRequest(
+            property=f"properties/{prop_id}",
+            date_ranges=[DateRange(start_date="1daysAgo", end_date="today")],
+            dimensions=[Dimension(name="country")],
+            metrics=[Metric(name="activeUsers")],
+            limit=5,
+        )
+        country_rep = client.run_report(country_req)
+        countries = []
+        for r in country_rep.rows:
+            name = r.dimension_values[0].value or "?"
+            cnt  = int(float(r.metric_values[0].value or 0))
+            countries.append({"name": name, "users": cnt})
+        countries.sort(key=lambda c: c["users"], reverse=True)
+        # Top pages
+        page_req = RunReportRequest(
+            property=f"properties/{prop_id}",
+            date_ranges=[DateRange(start_date="1daysAgo", end_date="today")],
+            dimensions=[Dimension(name="pagePath")],
+            metrics=[Metric(name="screenPageViews")],
+            limit=5,
+        )
+        page_rep = client.run_report(page_req)
+        pages = []
+        for r in page_rep.rows:
+            path  = r.dimension_values[0].value or "/"
+            views = int(float(r.metric_values[0].value or 0))
+            pages.append({"path": path[:80], "views": views})
+        pages.sort(key=lambda p: p["views"], reverse=True)
+        return {
+            "sessions_24h":  sessions,
+            "users_24h":     users,
+            "pageviews_24h": pageviews,
+            "avg_session_s": avg_sess,
+            "top_countries": countries,
+            "top_pages":     pages,
+        }
+    except Exception as e:
+        msg = str(e)
+        # Common: PERMISSION_DENIED if SA not added to property
+        if "PERMISSION_DENIED" in msg or "permission" in msg.lower():
+            return {"error": "PERMISSION_DENIED — add SA to this property", "permission_error": True}
+        return {"error": f"{type(e).__name__}: {msg[:200]}"}
+
+
+def _ga4_summary_fresh():
+    import concurrent.futures
+    out = {"zones": {}}
+    pending = {name: pid for name, pid in GA4_PROPERTIES.items() if pid}
+    if not pending:
+        return {"error": "no GA4 property IDs configured", "zones": {}}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(pending)) as ex:
+        futs = {ex.submit(_ga4_query_property, pid): name for name, pid in pending.items()}
+        for f in concurrent.futures.as_completed(futs):
+            name = futs[f]
+            try:
+                out["zones"][name] = f.result()
+            except Exception as e:
+                out["zones"][name] = {"error": f"thread: {e}"}
+    return out
+
+
+@app.route("/api/ga4/summary")
+def ga4_summary():
+    """Per-property GA4 last-24h analytics, cached 10 min."""
+    cached = nexus_cache.cache_get("ga4_summary")
+    age    = nexus_cache.cache_age("ga4_summary")
+    if cached and age is not None and age < GA4_CACHE_TTL:
+        return jsonify({"data": cached["data"], "age": round(age)})
+    data = _ga4_summary_fresh()
+    if "error" in data and not data.get("zones"):
+        return jsonify({"error": data["error"]}), 503
+    nexus_cache.cache_set("ga4_summary", data)
+    return jsonify({"data": data, "age": 0})
+
+
 # ── Whisper transcription ─────────────────────────────────────────────────────
 
 _whisper_model     = None
