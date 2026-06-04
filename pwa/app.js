@@ -90,8 +90,8 @@ const DEPARTMENTS_META = {
   },
   marketing: {
     icon: '📣', accent: '#ff3399',
-    description: 'Marketing department. Discord feed from #marketing — quick-send to agent for briefs, captions, SEO drafts.',
-    loader: 'loadDeptDiscord', channel: 'marketing', agent: 'marketing',
+    description: 'Marketing department. Live n8n social workflow state + Discord feed from #marketing.',
+    loader: 'loadDeptMarketing', channel: 'marketing', agent: 'marketing',
   },
   business: {
     icon: '💼', accent: '#ffc800',
@@ -340,13 +340,58 @@ async function loadDeptInfra() {
   $detailGrid.innerHTML = html;
 }
 
-// ── Business dept renderer (domain status + Cloudflare + GA4 + Discord) ──
+// ── Marketing dept renderer (n8n social + Discord) ───────────────────────
+async function loadDeptMarketing(meta) {
+  const [social, feed] = await Promise.all([
+    deptApi('/api/social/queue').catch(e => ({ _err: e.message })),
+    deptApi('/api/discord/channel/marketing').catch(e => ({ error: e.message })),
+  ]);
+  let html = '<div class="dept-section-title">n8n workflows (24h)</div>';
+  if (social._err || social.error) {
+    html += `<div class="dept-error">${escHtml(social._err || social.error)}</div>`;
+  } else {
+    const s = social.data || {};
+    const successRate = s.exec_24h > 0 ? Math.round((s.exec_24h_success / s.exec_24h) * 100) : 0;
+    html += `<div class="dept-substats">
+      <div class="detail-card"><span class="detail-card-label">ACTIVE</span><span class="detail-card-value">${s.workflows_active||0}</span></div>
+      <div class="detail-card"><span class="detail-card-label">EXEC 24H</span><span class="detail-card-value">${(s.exec_24h||0).toLocaleString()}</span></div>
+      <div class="detail-card"><span class="detail-card-label">SUCCESS</span><span class="detail-card-value">${(s.exec_24h_success||0).toLocaleString()} · ${successRate}%</span></div>
+      <div class="detail-card"><span class="detail-card-label">FAILED</span><span class="detail-card-value">${(s.exec_24h_failed||0).toLocaleString()}</span></div>
+      <div class="detail-card"><span class="detail-card-label">RUNNING</span><span class="detail-card-value">${s.exec_running||0}</span></div>
+    </div>`;
+    if ((s.active_workflows||[]).length) {
+      html += '<div class="dept-section-title">Top active workflows</div>';
+      html += '<div class="dept-feed" style="max-height:none">' + s.active_workflows.map(w => {
+        const st = (w.status || '').toLowerCase();
+        const cls = st === 'success' ? 'up' : (st === 'error' || st === 'failed' || st === 'crashed') ? 'down' : '';
+        return `<div class="dept-domain-row ${cls}"><span class="dept-domain-name">${escHtml(w.name)}</span><span class="dept-domain-stat">${escHtml(w.status || '—')} · ${escHtml((w.last||'').slice(0,16))}</span></div>`;
+      }).join('') + '</div>';
+    }
+  }
+  // Discord feed
+  html += '<div class="dept-section-title">#marketing activity</div>';
+  if (feed.error) {
+    html += `<div class="dept-error">${escHtml(feed.error)}</div>`;
+  } else {
+    const msgs = (feed.messages || []).slice(0, 6);
+    if (!msgs.length) html += '<div class="dept-empty">No messages.</div>';
+    else html += '<div class="dept-feed">' + msgs.map(m =>
+      `<div class="disc-msg"><span class="disc-author">${escHtml(m.author)}</span><span class="disc-ts">${escHtml(m.ts)}</span><div class="disc-body">${escHtml((m.content||'').slice(0,220))}</div></div>`
+    ).join('') + '</div>';
+  }
+  html += `<div class="dept-send"><input type="text" id="dept-send-input" class="dept-send-input" placeholder="Message #marketing via marketing agent..." autocomplete="off"><button type="button" id="dept-send-btn" class="dept-send-btn">SEND</button></div>`;
+  $detailGrid.innerHTML = html;
+  wireDeptSend(meta.channel, meta.agent);
+}
+
+// ── Business dept renderer (domains + CF + GA4 + Shop + Discord) ─────────
 async function loadDeptBusiness(meta) {
   const DOMAINS = ['call-on.dad', 'call-on.mom', 'call-on.media', 'call-on.shop'];
-  const [domains, cf, ga, feed] = await Promise.all([
+  const [domains, cf, ga, shop, feed] = await Promise.all([
     deptApi('/api/domains/status').catch(e => ({ _err: e.message })),
     deptApi('/api/cloudflare/summary').catch(e => ({ _err: e.message })),
     deptApi('/api/ga4/summary').catch(e => ({ _err: e.message })),
+    deptApi('/api/shop/summary').catch(e => ({ _err: e.message })),
     deptApi('/api/discord/channel/business').catch(e => ({ error: e.message })),
   ]);
   let html = '<div class="dept-section-title">Domains</div>';
@@ -401,6 +446,26 @@ async function loadDeptBusiness(meta) {
         <div class="dept-ga-head"><span class="dept-ga-name">${escHtml(dom)}</span><span class="dept-ga-users">${(z.users_24h||0).toLocaleString()} users · ${(z.sessions_24h||0).toLocaleString()} sess</span></div>
         <div class="dept-ga-meta"><span class="dept-ga-pv">${(z.pageviews_24h||0).toLocaleString()} pv · ${(z.avg_session_s||0)}s avg</span><span class="dept-ga-countries">${topC || '—'}</span></div>
       </div>`;
+    }
+  }
+  // Shop summary
+  html += `<div class="dept-section-title">Shop (call-on.shop)</div>`;
+  if (shop._err || shop.error) {
+    html += `<div class="dept-error">${escHtml(shop._err || shop.error)}</div>`;
+  } else {
+    const s = shop.data || {};
+    const fmt = n => '£' + (Number(n)||0).toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2});
+    html += `<div class="dept-substats">
+      <div class="detail-card"><span class="detail-card-label">ORDERS · TODAY</span><span class="detail-card-value">${s.orders_today||0}</span></div>
+      <div class="detail-card"><span class="detail-card-label">ORDERS · 7D</span><span class="detail-card-value">${s.orders_7d||0}</span></div>
+      <div class="detail-card"><span class="detail-card-label">REVENUE · 7D</span><span class="detail-card-value">${fmt(s.revenue_7d)}</span></div>
+      <div class="detail-card"><span class="detail-card-label">PENDING</span><span class="detail-card-value">${s.pending||0}</span></div>
+      <div class="detail-card"><span class="detail-card-label">PRODUCTS LIVE</span><span class="detail-card-value">${s.products_live||0}/${s.products_all||0}</span></div>
+      <div class="detail-card"><span class="detail-card-label">REVENUE · 30D</span><span class="detail-card-value">${fmt(s.revenue_30d)}</span></div>
+    </div>`;
+    if ((s.top_products_30d||[]).length) {
+      html += '<div class="dept-feed" style="max-height:none">' + s.top_products_30d.map(p =>
+        `<div class="disc-msg"><span class="disc-author">${escHtml(p.title)}</span><span class="disc-ts">${p.units} sold</span></div>`).join('') + '</div>';
     }
   }
   html += '<div class="dept-section-title">#business activity</div>';

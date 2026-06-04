@@ -1472,6 +1472,132 @@ def ga4_summary():
     return jsonify({"data": data, "age": 0})
 
 
+# ── Shop summary (CT102 MariaDB · Callon-dad.shop_*) ─────────────────────────
+
+SHOP_CACHE_TTL = 300  # 5 min
+
+SHOP_QUERIES = """
+SELECT 'orders_today', COUNT(*) FROM shop_orders WHERE DATE(created_at) = CURDATE() UNION ALL
+SELECT 'orders_7d',    COUNT(*) FROM shop_orders WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) UNION ALL
+SELECT 'orders_30d',   COUNT(*) FROM shop_orders WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) UNION ALL
+SELECT 'revenue_today',COALESCE(SUM(total),0) FROM shop_orders WHERE DATE(created_at) = CURDATE() AND status NOT IN ('cancelled','refunded') UNION ALL
+SELECT 'revenue_7d',   COALESCE(SUM(total),0) FROM shop_orders WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND status NOT IN ('cancelled','refunded') UNION ALL
+SELECT 'revenue_30d',  COALESCE(SUM(total),0) FROM shop_orders WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND status NOT IN ('cancelled','refunded') UNION ALL
+SELECT 'pending',      COUNT(*) FROM shop_orders WHERE status IN ('pending','processing','awaiting_fulfilment','awaiting_fulfillment') UNION ALL
+SELECT 'products_live',COUNT(*) FROM shop_products WHERE active = 1 UNION ALL
+SELECT 'products_all', COUNT(*) FROM shop_products;
+"""
+
+
+def _shop_summary_fresh():
+    try:
+        # Run all aggregate queries in one batch via pct_exec.
+        cmd = "mysql -N -B -e \"" + SHOP_QUERIES.replace("\n", " ").strip() + "\" Callon-dad"
+        raw = pct_exec_cmd("102", cmd)
+        if raw.startswith("SSH"):
+            return {"error": raw}
+        out = {}
+        for line in raw.strip().splitlines():
+            parts = line.split("\t")
+            if len(parts) == 2:
+                key, val = parts
+                try:
+                    f = float(val)
+                    out[key] = f if "revenue" in key else int(f)
+                except ValueError:
+                    out[key] = val
+        # Top products last 30d by units sold
+        top_cmd = ("mysql -N -B -e \"SELECT p.title, SUM(oi.quantity) AS units "
+                   "FROM shop_order_items oi JOIN shop_orders o ON oi.order_id=o.id "
+                   "JOIN shop_products p ON oi.product_id=p.id "
+                   "WHERE o.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) "
+                   "AND o.status NOT IN ('cancelled','refunded') "
+                   "GROUP BY p.id ORDER BY units DESC LIMIT 5;\" Callon-dad")
+        top_raw = pct_exec_cmd("102", top_cmd)
+        top = []
+        if not top_raw.startswith("SSH"):
+            for line in top_raw.strip().splitlines():
+                parts = line.split("\t")
+                if len(parts) == 2:
+                    top.append({"title": parts[0][:60], "units": int(parts[1])})
+        out["top_products_30d"] = top
+        return out
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {e}"}
+
+
+@app.route("/api/shop/summary")
+def shop_summary():
+    cached = nexus_cache.cache_get("shop_summary")
+    age    = nexus_cache.cache_age("shop_summary")
+    if cached and age is not None and age < SHOP_CACHE_TTL:
+        return jsonify({"data": cached["data"], "age": round(age)})
+    data = _shop_summary_fresh()
+    if "error" in data:
+        return jsonify({"error": data["error"]}), 503
+    nexus_cache.cache_set("shop_summary", data)
+    return jsonify({"data": data, "age": 0})
+
+
+# ── Social workflow (CT112 n8n SQLite) ────────────────────────────────────────
+
+SOCIAL_CACHE_TTL = 300
+
+
+def _social_summary_fresh():
+    # n8n SQLite at /opt/n8n/data/database.sqlite — query workflows + executions.
+    sql = (
+        "SELECT 'workflows_active', COUNT(*) FROM workflow_entity WHERE active=1; "
+        "SELECT 'exec_24h',          COUNT(*) FROM execution_entity WHERE startedAt >= datetime('now','-1 day'); "
+        "SELECT 'exec_24h_success',  COUNT(*) FROM execution_entity WHERE startedAt >= datetime('now','-1 day') AND status='success'; "
+        "SELECT 'exec_24h_failed',   COUNT(*) FROM execution_entity WHERE startedAt >= datetime('now','-1 day') AND status IN ('error','crashed','failed'); "
+        "SELECT 'exec_running',      COUNT(*) FROM execution_entity WHERE status='running' OR finished=0; "
+    )
+    cmd = "sqlite3 -batch /opt/n8n/data/database.sqlite \"" + sql.replace('"','\\"') + "\""
+    raw = pct_exec_cmd("112", cmd)
+    if raw.startswith("SSH"):
+        return {"error": raw}
+    out = {}
+    for line in raw.strip().splitlines():
+        parts = line.split("|")
+        if len(parts) == 2:
+            try:
+                out[parts[0]] = int(parts[1])
+            except ValueError:
+                out[parts[0]] = parts[1]
+    # Recent workflow names (active) + their last run
+    names_cmd = ("sqlite3 -batch /opt/n8n/data/database.sqlite "
+                 "\"SELECT w.name, MAX(e.stoppedAt), e.status FROM workflow_entity w "
+                 "LEFT JOIN execution_entity e ON e.workflowId = w.id "
+                 "WHERE w.active=1 GROUP BY w.id ORDER BY MAX(e.stoppedAt) DESC LIMIT 6;\"")
+    names_raw = pct_exec_cmd("112", names_cmd)
+    flows = []
+    if not names_raw.startswith("SSH"):
+        for line in names_raw.strip().splitlines():
+            parts = line.split("|")
+            if len(parts) >= 1:
+                flows.append({
+                    "name":    (parts[0] if len(parts) > 0 else "")[:50],
+                    "last":    (parts[1] if len(parts) > 1 else "") or "—",
+                    "status":  (parts[2] if len(parts) > 2 else "") or "—",
+                })
+    out["active_workflows"] = flows
+    return out
+
+
+@app.route("/api/social/queue")
+def social_queue():
+    cached = nexus_cache.cache_get("social_queue")
+    age    = nexus_cache.cache_age("social_queue")
+    if cached and age is not None and age < SOCIAL_CACHE_TTL:
+        return jsonify({"data": cached["data"], "age": round(age)})
+    data = _social_summary_fresh()
+    if "error" in data:
+        return jsonify({"error": data["error"]}), 503
+    nexus_cache.cache_set("social_queue", data)
+    return jsonify({"data": data, "age": 0})
+
+
 # ── Whisper transcription ─────────────────────────────────────────────────────
 
 _whisper_model     = None

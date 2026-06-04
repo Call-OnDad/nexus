@@ -184,6 +184,13 @@
             </div>
             <div class="card card-wide">
               <div class="card-title-row">
+                <div class="card-title">SHOP · call-on.shop</div>
+                <button class="reload-btn" id="shop-reload">↻</button>
+              </div>
+              <div class="shop-grid" id="shop-grid"><div class="feed-loading">Loading shop stats…</div></div>
+            </div>
+            <div class="card card-wide">
+              <div class="card-title-row">
                 <div class="card-title">#BUSINESS ACTIVITY</div>
                 <button class="reload-btn" data-reload="business">↻</button>
               </div>
@@ -589,6 +596,33 @@
     }
   }
 
+  // ── Shop summary ──────────────────────────────────────────────────────────
+  async function loadShop() {
+    const el = document.getElementById('shop-grid');
+    if (!el) return;
+    el.innerHTML = '<div class="feed-loading">Querying shop…</div>';
+    try {
+      const r = await apiFetch('/api/shop/summary');
+      if (r.error) { el.innerHTML = `<div class="feed-error">${esc(r.error)}</div>`; return; }
+      const s = r.data || {};
+      const fmt = n => '£' + (Number(n)||0).toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2});
+      let html = '<div class="cf-grid">';
+      html += `<div class="cf-card"><div class="cf-dom">ORDERS</div><div class="cf-stats"><div class="cf-stat"><span class="cf-label">Today</span><span class="cf-val">${s.orders_today||0}</span></div><div class="cf-stat"><span class="cf-label">7 days</span><span class="cf-val">${s.orders_7d||0}</span></div></div></div>`;
+      html += `<div class="cf-card"><div class="cf-dom">REVENUE</div><div class="cf-stats"><div class="cf-stat"><span class="cf-label">Today</span><span class="cf-val">${fmt(s.revenue_today)}</span></div><div class="cf-stat"><span class="cf-label">7 days</span><span class="cf-val">${fmt(s.revenue_7d)}</span></div></div></div>`;
+      html += `<div class="cf-card"><div class="cf-dom">FULFILMENT</div><div class="cf-stats"><div class="cf-stat"><span class="cf-label">Pending</span><span class="cf-val">${s.pending||0}</span></div><div class="cf-stat"><span class="cf-label">Products</span><span class="cf-val">${s.products_live||0}/${s.products_all||0}</span></div></div></div>`;
+      html += `<div class="cf-card"><div class="cf-dom">30-DAY</div><div class="cf-stats"><div class="cf-stat"><span class="cf-label">Orders</span><span class="cf-val">${s.orders_30d||0}</span></div><div class="cf-stat"><span class="cf-label">Revenue</span><span class="cf-val">${fmt(s.revenue_30d)}</span></div></div></div>`;
+      html += '</div>';
+      if ((s.top_products_30d||[]).length) {
+        html += '<div style="margin-top:12px;font-size:9px;letter-spacing:2px;color:rgba(255,212,0,.5);text-transform:uppercase">Top products · 30d</div>';
+        html += '<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">' + s.top_products_30d.map(p =>
+          `<div style="display:flex;justify-content:space-between;font-size:11px"><span>${esc(p.title)}</span><span style="color:var(--cyan)">${p.units}</span></div>`).join('') + '</div>';
+      }
+      el.innerHTML = html;
+    } catch(e) {
+      el.innerHTML = `<div class="feed-error">Shop failed: ${esc(e.message)}</div>`;
+    }
+  }
+
   // ── Domain status ─────────────────────────────────────────────────────────
   async function loadDomains() {
     try {
@@ -731,6 +765,7 @@
         loadDomains();
         loadCloudflare();
         loadGA4();
+        loadShop();
         loadDiscordFeed('business','feed-business');
         setTimeout(()=>loadDiscordFeed('manager','feed-manager'), 600);
         break;
