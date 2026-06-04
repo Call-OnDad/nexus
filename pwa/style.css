@@ -224,6 +224,24 @@ html, body {
 .ga-country em { color: rgba(255,255,255,.85); font-style: normal; margin-left: 3px; }
 .ga-err   { font-size: 10px; color: #ff8c4d; }
 
+/* ── Per-container live stats ─────────────────────────────────── */
+.ct-stats { display: flex; flex-direction: column; gap: 6px; }
+.ct-stat-row {
+  background: rgba(0,212,255,.03);
+  border: 1px solid rgba(0,212,255,.10);
+  border-left: 2px solid rgba(0,212,255,.4);
+  border-radius: 4px;
+  padding: 6px 10px;
+}
+.ct-stat-head { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
+.ct-stat-name { color: var(--text); letter-spacing: .3px; }
+.ct-stat-num  { color: var(--cyan); letter-spacing: 1px; font-size: 10px; }
+.ct-stat-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ct-stat-bar-wrap { display: flex; align-items: center; gap: 6px; }
+.ct-stat-label { font-size: 8px; letter-spacing: 1.5px; color: rgba(0,212,255,.5); width: 22px; }
+.ct-stat-bar-track { flex: 1; height: 4px; background: rgba(0,212,255,.08); border-radius: 2px; overflow: hidden; }
+.ct-stat-bar { height: 100%; transition: width .4s ease; }
+
 /* ── SERVICE HEALTH ─────────────────────────────────────────── */
 .svc-health-grid { display:flex; flex-direction:column; gap:10px; }
 .svc-row         { display:flex; align-items:center; gap:10px; font-size:12px; }

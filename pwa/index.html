@@ -106,6 +106,7 @@
             <div class="card"><div class="card-title">RAM</div><div class="big-stat" id="infra-ram">—</div><div class="bar-wrap"><div class="bar" id="infra-ram-bar"></div></div></div>
             <div class="card"><div class="card-title">LOAD AVG</div><div class="big-stat sm" id="infra-load">—</div><div class="stat-label">1m / 5m / 15m</div></div>
             <div class="card card-full"><div class="card-title">CONTAINERS</div><div class="ct-list" id="infra-ct-list">Loading…</div></div>
+            <div class="card card-full"><div class="card-title">PER-CONTAINER LOAD (sorted by pressure)</div><div class="ct-stats" id="infra-ct-stats">Loading…</div></div>
             <div class="card card-full"><div class="card-title">STORAGE</div><div class="storage-list" id="infra-storage">Loading…</div></div>
           </div>
         </section>
@@ -506,6 +507,26 @@
       document.getElementById('infra-storage').innerHTML=storHtml||'—';
       document.getElementById('nexus-host-snap').textContent=ht;
       document.getElementById('nexus-ct-snap').textContent=ct;
+      // Per-container live stats
+      try {
+        const statsR = await apiFetch('/api/proxmox/container_stats');
+        const stats = (statsR.data && statsR.data.containers) || [];
+        const sorted = [...stats].sort((a,b) => ((b.cpu_pct||0)+(b.mem_pct||0)) - ((a.cpu_pct||0)+(a.mem_pct||0)));
+        const el = document.getElementById('infra-ct-stats');
+        if (el) {
+          el.innerHTML = sorted.map(c => {
+            const cpuC = barColor(c.cpu_pct);
+            const memC = barColor(c.mem_pct);
+            return `<div class="ct-stat-row">
+              <div class="ct-stat-head"><span class="ct-stat-name">CT${c.ctid} · ${esc(c.name)}</span><span class="ct-stat-num">${c.cpu_pct}% · ${c.mem_pct}%</span></div>
+              <div class="ct-stat-bars">
+                <div class="ct-stat-bar-wrap"><span class="ct-stat-label">CPU</span><div class="ct-stat-bar-track"><div class="ct-stat-bar" style="width:${Math.min(100,c.cpu_pct)}%;background:${cpuC}"></div></div></div>
+                <div class="ct-stat-bar-wrap"><span class="ct-stat-label">RAM</span><div class="ct-stat-bar-track"><div class="ct-stat-bar" style="width:${Math.min(100,c.mem_pct)}%;background:${memC}"></div></div></div>
+              </div>
+            </div>`;
+          }).join('');
+        }
+      } catch(e) { console.warn('[ct-stats]', e); }
     } catch(e){console.warn('[infra]',e);}
   }
 

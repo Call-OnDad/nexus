@@ -553,6 +553,23 @@ html, body {
 .dept-ct-chip.up   { border-color: rgba(0,255,136,.4); color: #00ff88; }
 .dept-ct-chip.down { border-color: rgba(255,77,77,.4); color: #ff4d4d; }
 
+.dept-ct-stats { grid-column: 1/-1; display: flex; flex-direction: column; gap: 6px; }
+.ct-stat-row {
+  background: rgba(0,212,255,.04);
+  border: 1px solid rgba(0,212,255,.12);
+  border-left: 2px solid rgba(0,212,255,.4);
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+.ct-stat-head { display: flex; justify-content: space-between; font-size: .6rem; margin-bottom: 4px; }
+.ct-stat-name { color: rgba(255,255,255,.85); letter-spacing: .3px; }
+.ct-stat-num  { color: var(--cyan); letter-spacing: 1px; font-size: .55rem; }
+.ct-stat-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ct-stat-bar-wrap { display: flex; align-items: center; gap: 4px; }
+.ct-stat-label { font-size: .45rem; letter-spacing: 1.5px; color: rgba(0,212,255,.5); width: 22px; }
+.ct-stat-bar-track { flex: 1; height: 3px; background: rgba(0,212,255,.08); border-radius: 2px; overflow: hidden; }
+.ct-stat-bar { height: 100%; transition: width .4s ease; }
+
 .dept-storage { grid-column: 1/-1; display: flex; flex-direction: column; gap: 8px; }
 .stor-row { display: grid; grid-template-columns: 90px 1fr 110px; gap: 8px; align-items: center; font-size: .6rem; letter-spacing: 1px; }
 .stor-name { color: rgba(0,212,255,.55); text-transform: uppercase; }

@@ -1497,6 +1497,71 @@ def ga4_summary():
     return jsonify({"data": data, "age": 0, "transient": all_errored})
 
 
+# ── Per-container live stats (via pvesh cluster/resources) ──────────────────
+
+CTSTATS_CACHE_TTL = 30  # 30s — these change fast
+
+
+def _ctstats_fresh():
+    """Run pvesh on the Proxmox host, parse per-CT cpu/mem/disk/uptime.
+
+    Calls subprocess directly to bypass execute_ssh's 2000-char truncation.
+    """
+    try:
+        r = subprocess.run(
+            ['ssh', '-i', NEXUS_SSH_KEY, '-o', 'StrictHostKeyChecking=no',
+             '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
+             f'claude@{PROXMOX_HOST}',
+             'sudo pvesh get /cluster/resources --type vm --output-format json'],
+            capture_output=True, text=True, timeout=20
+        )
+        raw = r.stdout
+    except subprocess.TimeoutExpired:
+        return {"error": "pvesh timed out"}
+    except Exception as e:
+        return {"error": f"ssh: {e}"}
+    try:
+        arr = json.loads(raw)
+    except Exception as e:
+        return {"error": f"parse: {e}"}
+    out = []
+    for r in arr:
+        if r.get("type") != "lxc":
+            continue
+        max_mem = r.get("maxmem") or 1
+        cpu_pct = round((r.get("cpu") or 0) * 100, 1)  # 0-1 fraction × maxcpu cores
+        mem_pct = round(((r.get("mem") or 0) / max_mem) * 100, 1)
+        max_disk = r.get("maxdisk") or 1
+        disk_pct = round(((r.get("disk") or 0) / max_disk) * 100, 1)
+        out.append({
+            "ctid":     r.get("vmid"),
+            "name":     r.get("name") or "",
+            "status":   r.get("status") or "",
+            "cpu_pct":  cpu_pct,
+            "max_cpu":  r.get("maxcpu") or 1,
+            "mem_pct":  mem_pct,
+            "mem_mb":   round((r.get("mem") or 0) / (1024*1024)),
+            "max_mem_mb": round(max_mem / (1024*1024)),
+            "disk_pct": disk_pct,
+            "uptime_s": r.get("uptime") or 0,
+        })
+    out.sort(key=lambda x: x["ctid"])
+    return {"containers": out}
+
+
+@app.route("/api/proxmox/container_stats")
+def proxmox_container_stats():
+    cached = nexus_cache.cache_get("ct_stats")
+    age    = nexus_cache.cache_age("ct_stats")
+    if cached and age is not None and age < CTSTATS_CACHE_TTL:
+        return jsonify({"data": cached["data"], "age": round(age)})
+    data = _ctstats_fresh()
+    if "error" in data:
+        return jsonify({"error": data["error"]}), 503
+    nexus_cache.cache_set("ct_stats", data)
+    return jsonify({"data": data, "age": 0})
+
+
 # ── Shop summary (CT102 MariaDB · Callon-dad.shop_*) ─────────────────────────
 
 SHOP_CACHE_TTL = 300  # 5 min

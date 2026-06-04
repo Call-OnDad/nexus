@@ -317,23 +317,43 @@ async function loadDeptNexus() {
 
 // ── Infra dept renderer ───────────────────────────────────────────────────
 async function loadDeptInfra() {
-  const [hR, cR, sR] = await Promise.all([
+  const [hR, cR, sR, statsR] = await Promise.all([
     deptApi('/api/proxmox/host').catch(() => ({ data: '' })),
     deptApi('/api/proxmox/containers').catch(() => ({ data: '' })),
     deptApi('/api/proxmox/storage').catch(() => ({ data: '' })),
+    deptApi('/api/proxmox/container_stats').catch(() => ({ _err: true })),
   ]);
   const cpu = parseCPU(hR.data), ram = parseRAM(hR.data), load = parseLoad(hR.data);
   const cts = parseContainers(cR.data), pools = parseStorage(sR.data);
+  const liveStats = (statsR.data && statsR.data.containers) || [];
 
   let html = '';
-  // CPU + RAM cards with bars
   html += `<div class="dept-bar-card"><div class="dept-bar-top"><span class="detail-card-label">CPU</span><span class="detail-card-value">${cpu!=null?cpu.toFixed(1)+'%':'—'}</span></div><div class="dept-bar-wrap"><div class="dept-bar" style="width:${cpu||0}%;background:${barColor(cpu||0)}"></div></div></div>`;
   html += `<div class="dept-bar-card"><div class="dept-bar-top"><span class="detail-card-label">RAM</span><span class="detail-card-value">${ram?ram.used+'/'+ram.total+' GB':'—'}</span></div><div class="dept-bar-wrap"><div class="dept-bar" style="width:${ram?ram.pct:0}%;background:${barColor(ram?ram.pct:0)}"></div></div></div>`;
   html += `<div class="detail-card"><span class="detail-card-label">LOAD AVG</span><span class="detail-card-value">${load}</span></div>`;
   html += `<div class="detail-card"><span class="detail-card-label">CONTAINERS</span><span class="detail-card-value">${cts.running} up · ${cts.stopped} down</span></div>`;
-  // Container chip grid spanning full width
-  html += `<div class="dept-ct-grid">${cts.items.map(c => `<span class="dept-ct-chip ${c.up?'up':'down'}">${escHtml(c.name)}</span>`).join('')}</div>`;
-  // Storage pools spanning full width
+
+  // Per-container live stats — sorted by combined CPU+RAM pressure so spikes float up.
+  if (liveStats.length) {
+    const sorted = [...liveStats].sort((a, b) => ((b.cpu_pct||0) + (b.mem_pct||0)) - ((a.cpu_pct||0) + (a.mem_pct||0)));
+    html += '<div class="dept-section-title">Per-container load (sorted by pressure)</div>';
+    html += '<div class="dept-ct-stats">' + sorted.map(c => {
+      const cpuC = barColor(c.cpu_pct);
+      const memC = barColor(c.mem_pct);
+      return `<div class="ct-stat-row">
+        <div class="ct-stat-head"><span class="ct-stat-name">CT${c.ctid} · ${escHtml(c.name)}</span><span class="ct-stat-num">${c.cpu_pct}% · ${c.mem_pct}%</span></div>
+        <div class="ct-stat-bars">
+          <div class="ct-stat-bar-wrap"><span class="ct-stat-label">CPU</span><div class="ct-stat-bar-track"><div class="ct-stat-bar" style="width:${Math.min(100,c.cpu_pct)}%;background:${cpuC}"></div></div></div>
+          <div class="ct-stat-bar-wrap"><span class="ct-stat-label">RAM</span><div class="ct-stat-bar-track"><div class="ct-stat-bar" style="width:${Math.min(100,c.mem_pct)}%;background:${memC}"></div></div></div>
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+  } else {
+    // Fall back to chip grid if live stats failed
+    html += `<div class="dept-ct-grid">${cts.items.map(c => `<span class="dept-ct-chip ${c.up?'up':'down'}">${escHtml(c.name)}</span>`).join('')}</div>`;
+  }
+
+  html += '<div class="dept-section-title">Storage</div>';
   html += '<div class="dept-storage">' + pools.map(p =>
     `<div class="stor-row"><div class="stor-name">${escHtml(p.name)}</div><div class="stor-bar-wrap"><div class="stor-bar" style="width:${p.pct}%;background:${barColor(p.pct)}"></div></div><div class="stor-stat">${p.pct}% · ${p.gb} GB</div></div>`
   ).join('') + '</div>';
