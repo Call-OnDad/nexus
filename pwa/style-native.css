@@ -625,6 +625,24 @@ html, body {
 .dept-cf-threats   { color: #ff8c4d; letter-spacing: 1px; white-space: nowrap; }
 .dept-cf-countries { color: rgba(255,255,255,.6); text-align: right; }
 .dept-cf-stat { font-size: .55rem; color: #ff8c4d; }
+
+.dept-ga-row {
+  grid-column: 1/-1;
+  padding: 8px 10px;
+  background: rgba(232,93,4,.04);
+  border: 1px solid rgba(232,93,4,.18);
+  border-left: 3px solid #e8650e;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+.dept-ga-row.error { border-left-color: rgba(255,77,77,.6); opacity: .75; }
+.dept-ga-head { display: flex; justify-content: space-between; align-items: center; font-size: .68rem; color: #fff; }
+.dept-ga-name { letter-spacing: .5px; }
+.dept-ga-users { color: #e8650e; letter-spacing: 1px; font-size: .58rem; }
+.dept-ga-meta { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; font-size: .55rem; }
+.dept-ga-pv         { color: rgba(255,212,0,.7); letter-spacing: 1px; white-space: nowrap; }
+.dept-ga-countries  { color: rgba(255,255,255,.6); text-align: right; }
+.dept-ga-stat       { font-size: .55rem; color: #ff8c4d; }
 .dept-substats { grid-column: 1/-1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .dept-substats .detail-card { padding: 8px 10px; }
 .dept-substats .detail-card-label { font-size: .38rem; letter-spacing: 2.5px; }

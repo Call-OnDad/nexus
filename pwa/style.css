@@ -202,6 +202,28 @@ html, body {
 .cf-country em { color: rgba(255,255,255,.85); font-style: normal; margin-left: 3px; }
 .cf-err   { font-size: 10px; color: #ff8c4d; }
 
+/* ── GA4 24h tiles ───────────────────────────────────────────────── */
+.ga-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+.ga-card {
+  background: rgba(232,93,4,.04);
+  border: 1px solid rgba(232,93,4,.18);
+  border-left: 3px solid #e8650e;
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+.ga-card.error { border-left-color: rgba(255,77,77,.6); opacity: .7; }
+.ga-dom { font-size: 11px; letter-spacing: 1px; color: #fff; margin-bottom: 6px; }
+.ga-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 6px; }
+.ga-stat  { display: flex; flex-direction: column; gap: 2px; }
+.ga-label { font-size: 8px; letter-spacing: 2px; color: rgba(255,212,0,.5); text-transform: uppercase; }
+.ga-val   { font-size: 14px; color: #e8650e; letter-spacing: .5px; }
+.ga-countries { display: flex; flex-wrap: wrap; gap: 6px; font-size: 10px; color: rgba(255,255,255,.55); }
+.ga-country em { color: rgba(255,255,255,.85); font-style: normal; margin-left: 3px; }
+.ga-err   { font-size: 10px; color: #ff8c4d; }
+
 /* ── SERVICE HEALTH ─────────────────────────────────────────── */
 .svc-health-grid { display:flex; flex-direction:column; gap:10px; }
 .svc-row         { display:flex; align-items:center; gap:10px; font-size:12px; }

@@ -178,6 +178,12 @@
             </div>
             <div class="card card-wide">
               <div class="card-title-row">
+                <div class="card-title">GA4 (24H)</div>
+              </div>
+              <div class="ga-grid" id="ga-grid"><div class="feed-loading">Loading GA4 stats…</div></div>
+            </div>
+            <div class="card card-wide">
+              <div class="card-title-row">
                 <div class="card-title">#BUSINESS ACTIVITY</div>
                 <button class="reload-btn" data-reload="business">↻</button>
               </div>
@@ -549,6 +555,40 @@
     }
   }
 
+  // ── GA4 24h ───────────────────────────────────────────────────────────────
+  async function loadGA4() {
+    const el = document.getElementById('ga-grid');
+    if (!el) return;
+    el.innerHTML = '<div class="feed-loading">Querying GA4…</div>';
+    try {
+      const r = await apiFetch('/api/ga4/summary');
+      if (r.error) { el.innerHTML = `<div class="feed-error">${esc(r.error)}</div>`; return; }
+      const zones = (r.data && r.data.zones) || {};
+      const domains = ['call-on.dad','call-on.mom','call-on.media','call-on.shop'];
+      el.innerHTML = domains.map(dom => {
+        const z = zones[dom];
+        if (!z) return '';
+        if (z.error) {
+          return `<div class="ga-card error"><div class="ga-dom">${esc(dom)}</div><div class="ga-err">${esc(z.error)}</div></div>`;
+        }
+        const top = (z.top_countries || []).slice(0,3)
+          .map(c => `<span class="ga-country">${esc(c.name)} <em>${(c.users||0).toLocaleString()}</em></span>`).join('');
+        return `<div class="ga-card">
+          <div class="ga-dom">${esc(dom)}</div>
+          <div class="ga-stats">
+            <div class="ga-stat"><span class="ga-label">Users</span><span class="ga-val">${(z.users_24h||0).toLocaleString()}</span></div>
+            <div class="ga-stat"><span class="ga-label">Sessions</span><span class="ga-val">${(z.sessions_24h||0).toLocaleString()}</span></div>
+            <div class="ga-stat"><span class="ga-label">Pageviews</span><span class="ga-val">${(z.pageviews_24h||0).toLocaleString()}</span></div>
+            <div class="ga-stat"><span class="ga-label">Avg session</span><span class="ga-val">${(z.avg_session_s||0)}s</span></div>
+          </div>
+          <div class="ga-countries">${top || '<span style="opacity:.4">no country data</span>'}</div>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      el.innerHTML = `<div class="feed-error">GA4 failed: ${esc(e.message)}</div>`;
+    }
+  }
+
   // ── Domain status ─────────────────────────────────────────────────────────
   async function loadDomains() {
     try {
@@ -690,6 +730,7 @@
       case 'business':
         loadDomains();
         loadCloudflare();
+        loadGA4();
         loadDiscordFeed('business','feed-business');
         setTimeout(()=>loadDiscordFeed('manager','feed-manager'), 600);
         break;

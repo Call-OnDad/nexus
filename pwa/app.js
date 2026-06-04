@@ -340,12 +340,13 @@ async function loadDeptInfra() {
   $detailGrid.innerHTML = html;
 }
 
-// ── Business dept renderer (domain status + Cloudflare + Discord) ────────
+// ── Business dept renderer (domain status + Cloudflare + GA4 + Discord) ──
 async function loadDeptBusiness(meta) {
   const DOMAINS = ['call-on.dad', 'call-on.mom', 'call-on.media', 'call-on.shop'];
-  const [domains, cf, feed] = await Promise.all([
+  const [domains, cf, ga, feed] = await Promise.all([
     deptApi('/api/domains/status').catch(e => ({ _err: e.message })),
     deptApi('/api/cloudflare/summary').catch(e => ({ _err: e.message })),
+    deptApi('/api/ga4/summary').catch(e => ({ _err: e.message })),
     deptApi('/api/discord/channel/business').catch(e => ({ error: e.message })),
   ]);
   let html = '<div class="dept-section-title">Domains</div>';
@@ -379,6 +380,26 @@ async function loadDeptBusiness(meta) {
       html += `<div class="dept-cf-row">
         <div class="dept-cf-head"><span class="dept-cf-name">${escHtml(dom)}</span><span class="dept-cf-req">${(z.requests_24h||0).toLocaleString()} req</span></div>
         <div class="dept-cf-meta"><span class="dept-cf-threats">⚠ ${z.threats_blocked_24h||0} blocked</span><span class="dept-cf-countries">${top || '—'}</span></div>
+      </div>`;
+    }
+  }
+  // GA4 per-domain stats (last 24h)
+  html += `<div class="dept-section-title">GA4 analytics (24h)</div>`;
+  if (ga._err || ga.error) {
+    html += `<div class="dept-error">${escHtml(ga._err || ga.error)}</div>`;
+  } else {
+    const gaZones = (ga.data && ga.data.zones) || {};
+    for (const dom of DOMAINS) {
+      const z = gaZones[dom];
+      if (!z) continue;
+      if (z.error) {
+        html += `<div class="dept-ga-row error"><span class="dept-ga-name">${escHtml(dom)}</span><span class="dept-ga-stat">${escHtml(z.error.substring(0, 60))}</span></div>`;
+        continue;
+      }
+      const topC = (z.top_countries || []).slice(0,2).map(c => `${escHtml(c.name)} ${c.users}`).join(' · ');
+      html += `<div class="dept-ga-row">
+        <div class="dept-ga-head"><span class="dept-ga-name">${escHtml(dom)}</span><span class="dept-ga-users">${(z.users_24h||0).toLocaleString()} users · ${(z.sessions_24h||0).toLocaleString()} sess</span></div>
+        <div class="dept-ga-meta"><span class="dept-ga-pv">${(z.pageviews_24h||0).toLocaleString()} pv · ${(z.avg_session_s||0)}s avg</span><span class="dept-ga-countries">${topC || '—'}</span></div>
       </div>`;
     }
   }
