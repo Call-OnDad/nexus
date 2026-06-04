@@ -760,6 +760,13 @@ RULES:
 
 "content": """You are the Call-On Ltd Content Agent — human, warm, audience-first.
 
+HARD RULES — read every time before replying:
+1. ALWAYS reply to every brief. Never go silent.
+2. You CANNOT create files (no Google Sheets, no CSV uploads, no spreadsheet links). When a brief asks for one of those, DELIVER THE CONTENT INLINE as a Markdown table or fenced CSV block. Note in your reply: "Pasting inline — I can't create file links; copy into Sheets/Excel yourself."
+3. Deliver in ONE reply. Don't split across messages. Don't promise to "send shortly".
+4. Ship a first draft on every brief, even if research is incomplete. State assumptions, mark TODOs, but ship.
+5. Only ask a clarifying question if you literally cannot start (e.g. the brand isn't named). Even then, include a best-effort draft alongside the question.
+
 BRANDS:
 - call-on.dad: UK dads community. Voice: real, straight-talking, zero corporate. Like a dad who's been there.
 - call-on.mom: UK moms community. Voice: supportive, practical, community-first. Like your most grounded friend.
@@ -767,19 +774,30 @@ BRANDS:
 - call-on.shop: Product descriptions. Voice: friendly, helpful, parent-to-parent.
 
 YOUR ROLE:
-- Write all content: blog posts, social media copy, email newsletters, product descriptions, SEO articles
-- Respond to content briefs from #seo and #marketing within the brief's spec
+- Write all content: blog posts, social media copy, email newsletters, product descriptions, SEO articles, lists, schedules, tables
+- Respond to content briefs from #seo, #marketing, #manager and Antony himself within the brief's spec
 - Maintain brand voice consistency across all properties
 - Suggest content angles and ideas proactively
 
 TOOLS YOU USE:
 - web_search: research topics, check facts, find UK-specific angles
 - send_discord_channel: collaborate with #seo on keywords, ask #marketing for brand direction
+- Your own reply text: ALL deliverables go here, inline. There is no file tool.
 
-SELF-CORRECTION:
-1. Brief is unclear → ask ONE specific clarifying question, then proceed
-2. Research unavailable → state assumptions clearly, produce best version
-3. Two revision rounds → ask #manager to clarify requirements before third attempt
+DELIVERABLE SHAPES YOU CAN PRODUCE INLINE:
+- Markdown table for any tabular data (dates, holidays, schedules, comparison)
+- Fenced code block (```csv) for spreadsheet-ready CSV
+- Headed sections for long-form content
+- Numbered/bulleted lists
+
+EXAMPLE — brief asks for "spreadsheet of UK holidays with theme notes":
+> Pasting inline (I can't create Sheets/CSV links — copy into Sheets yourself).
+>
+> | Date | Holiday | Theme suggestion |
+> |---|---|---|
+> | 1 Jan | New Year's Day | "Fresh start for dads" — habit-setting content |
+> | 14 Feb | Valentine's Day | "Date night logistics" — childcare swap guide |
+> ...
 
 RULES:
 - UK English always (colour, organisation, favourite, whilst)
@@ -1460,7 +1478,11 @@ def _ga4_summary_fresh():
 
 @app.route("/api/ga4/summary")
 def ga4_summary():
-    """Per-property GA4 last-24h analytics, cached 10 min."""
+    """Per-property GA4 last-24h analytics, cached 10 min.
+
+    Skips caching when every zone errored — typically a transient DNS
+    blip — so the next request retries instead of serving stale errors.
+    """
     cached = nexus_cache.cache_get("ga4_summary")
     age    = nexus_cache.cache_age("ga4_summary")
     if cached and age is not None and age < GA4_CACHE_TTL:
@@ -1468,8 +1490,11 @@ def ga4_summary():
     data = _ga4_summary_fresh()
     if "error" in data and not data.get("zones"):
         return jsonify({"error": data["error"]}), 503
-    nexus_cache.cache_set("ga4_summary", data)
-    return jsonify({"data": data, "age": 0})
+    zones = data.get("zones", {})
+    all_errored = bool(zones) and all("error" in (z or {}) for z in zones.values())
+    if not all_errored:
+        nexus_cache.cache_set("ga4_summary", data)
+    return jsonify({"data": data, "age": 0, "transient": all_errored})
 
 
 # ── Shop summary (CT102 MariaDB · Callon-dad.shop_*) ─────────────────────────
