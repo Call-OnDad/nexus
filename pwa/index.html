@@ -64,33 +64,81 @@
         <!-- NEXUS AI ──────────────────────────────── -->
         <section class="dept-panel" id="dept-nexus">
           <div class="panel-header">
-            <h2 class="panel-title" style="--accent:var(--cyan)">◈ NEXUS AI</h2>
-            <span class="panel-sub">Intelligence · Automation · Control</span>
+            <h2 class="panel-title" style="--accent:var(--cyan)">◈ NEXUS AI · Overview</h2>
+            <span class="panel-sub" id="overview-updated">Live snapshot across every department</span>
           </div>
-          <div class="panel-grid">
-            <div class="card">
-              <div class="card-title">SYSTEM</div>
-              <div class="stat-row">
-                <div class="stat-item"><div class="stat-value" id="nexus-version">—</div><div class="stat-label">VERSION</div></div>
-                <div class="stat-item"><div class="stat-value" id="nexus-memory-count">—</div><div class="stat-label">MEMORY</div></div>
-                <div class="stat-item"><div class="stat-value" id="nexus-cache-pools">—</div><div class="stat-label">CACHE</div></div>
-              </div>
+          <div class="overview-grid">
+            <!-- HEADLINE KPI ROW -->
+            <div class="ov-tile" data-tab="infra">
+              <div class="ov-label">HOST CPU</div>
+              <div class="ov-value" id="ov-host-cpu">—</div>
+              <div class="ov-sub" id="ov-host-ram">RAM —</div>
             </div>
-            <div class="card">
-              <div class="card-title">LIVE TOOLS</div>
-              <div class="tool-grid">
-                <div class="tool-chip">PROXMOX</div><div class="tool-chip">HA</div>
-                <div class="tool-chip">SEARCH</div><div class="tool-chip">EMAIL</div>
-                <div class="tool-chip">DISCORD</div><div class="tool-chip">SSH</div>
-              </div>
+            <div class="ov-tile" data-tab="infra">
+              <div class="ov-label">CONTAINERS</div>
+              <div class="ov-value"><span id="ov-ct-up">—</span> <span class="ov-dim">/</span> <span id="ov-ct-total" class="ov-dim">—</span></div>
+              <div class="ov-sub" id="ov-ct-pressure">— pressured</div>
             </div>
-            <div class="card card-wide">
-              <div class="card-title">HOST SNAPSHOT</div>
-              <div class="snap-text" id="nexus-host-snap">Loading…</div>
+            <div class="ov-tile" data-tab="security">
+              <div class="ov-label">SERVICES</div>
+              <div class="ov-svc-row" id="ov-svc-row"></div>
+              <div class="ov-sub">HA · Plex · n8n · Pi-hole · NEXUS</div>
             </div>
-            <div class="card card-wide">
-              <div class="card-title">CONTAINERS</div>
-              <div class="snap-text" id="nexus-ct-snap">Loading…</div>
+            <div class="ov-tile" data-tab="business">
+              <div class="ov-label">DOMAINS</div>
+              <div class="ov-svc-row" id="ov-dom-row"></div>
+              <div class="ov-sub">.dad · .mom · .media · .shop</div>
+            </div>
+
+            <!-- BUSINESS -->
+            <div class="ov-tile ov-accent-amber" data-tab="business">
+              <div class="ov-label">CLOUDFLARE 24H</div>
+              <div class="ov-value" id="ov-cf-req">—</div>
+              <div class="ov-sub"><span id="ov-cf-threats">—</span> threats blocked</div>
+            </div>
+            <div class="ov-tile ov-accent-amber" data-tab="business">
+              <div class="ov-label">GA4 USERS 24H</div>
+              <div class="ov-value" id="ov-ga-users">—</div>
+              <div class="ov-sub"><span id="ov-ga-sess">—</span> sessions · <span id="ov-ga-pv">—</span> pv</div>
+            </div>
+            <div class="ov-tile ov-accent-amber" data-tab="business">
+              <div class="ov-label">SHOP</div>
+              <div class="ov-value" id="ov-shop-rev">£—</div>
+              <div class="ov-sub"><span id="ov-shop-orders">—</span> orders 7d · <span id="ov-shop-pending">—</span> pending</div>
+            </div>
+            <div class="ov-tile ov-accent-green" data-tab="community">
+              <div class="ov-label">COMMUNITY</div>
+              <div class="ov-value" id="ov-comm-users">—</div>
+              <div class="ov-sub"><span id="ov-comm-topics">—</span> topics · <span id="ov-comm-msgs">—</span> messages</div>
+            </div>
+
+            <!-- AUTOMATION -->
+            <div class="ov-tile ov-accent-violet" data-tab="marketing">
+              <div class="ov-label">N8N · 24H</div>
+              <div class="ov-value" id="ov-n8n-exec">—</div>
+              <div class="ov-sub"><span id="ov-n8n-success">—</span>% ok · <span id="ov-n8n-failed">—</span> failed</div>
+            </div>
+            <div class="ov-tile ov-accent-violet" data-tab="nexus">
+              <div class="ov-label">NEXUS</div>
+              <div class="ov-value" id="nexus-version">—</div>
+              <div class="ov-sub"><span id="nexus-memory-count">—</span> · <span id="nexus-cache-pools">—</span></div>
+            </div>
+            <div class="ov-tile" data-tab="infra">
+              <div class="ov-label">STORAGE · LOCAL</div>
+              <div class="ov-value" id="ov-stor-local">—</div>
+              <div class="ov-sub"><span id="ov-stor-lvm">lvm —</span> · <span id="ov-stor-pbs">pbs —</span></div>
+            </div>
+            <div class="ov-tile ov-accent-amber" data-tab="email">
+              <div class="ov-label">INBOX</div>
+              <div class="ov-value" id="ov-email-unread">—</div>
+              <div class="ov-sub">Gmail + Yahoo</div>
+            </div>
+          </div>
+
+          <div class="panel-grid" style="margin-top:18px">
+            <div class="card card-full">
+              <div class="card-title">PER-CONTAINER LOAD</div>
+              <div class="ct-stats" id="ov-ct-stats">Loading…</div>
             </div>
           </div>
         </section>
@@ -617,6 +665,125 @@
     }
   }
 
+  // ── NEXUS overview (homepage) ─────────────────────────────────────────────
+  function setOv(id, v) { const e = document.getElementById(id); if (e) e.textContent = v; }
+  function svcDots(elId, items) {
+    const el = document.getElementById(elId); if (!el) return;
+    el.innerHTML = items.map(i => `<span class="ov-dot ${i.up?'up':'down'}" title="${esc(i.name)}: ${i.up?'up':'down'}"></span>`).join('');
+  }
+  async function loadOverview() {
+    const ts = new Date().toTimeString().slice(0,5);
+    setOv('overview-updated', `Live snapshot · last refresh ${ts}`);
+    // Fire all queries in parallel; tolerate any single failure.
+    const fetchSafe = p => apiFetch(p).catch(() => null);
+    const [h, ct, store, status, doms, cf, ga, shop, comm, social, health] = await Promise.all([
+      fetchSafe('/api/proxmox/host'),
+      fetchSafe('/api/proxmox/container_stats'),
+      fetchSafe('/api/proxmox/storage'),
+      fetchSafe('/api/status'),
+      fetchSafe('/api/domains/status'),
+      fetchSafe('/api/cloudflare/summary'),
+      fetchSafe('/api/ga4/summary'),
+      fetchSafe('/api/shop/summary'),
+      fetchSafe('/api/community/stats'),
+      fetchSafe('/api/social/queue'),
+      fetchSafe('/health'),
+    ]);
+    // Host CPU/RAM
+    if (h && h.data) {
+      const cpu = parseCPU(h.data), ram = parseRAM(h.data);
+      setOv('ov-host-cpu', cpu!=null ? cpu.toFixed(1)+'%' : '—');
+      setOv('ov-host-ram', ram ? `RAM ${ram.used}/${ram.total} GB · ${ram.pct}%` : 'RAM —');
+    }
+    // Containers
+    if (ct && ct.data && ct.data.containers) {
+      const all = ct.data.containers;
+      const up = all.filter(c => c.status === 'running').length;
+      setOv('ov-ct-up', up);
+      setOv('ov-ct-total', all.length);
+      const pressed = all.filter(c => (c.cpu_pct||0) > 50 || (c.mem_pct||0) > 75).length;
+      setOv('ov-ct-pressure', pressed ? pressed + ' under pressure' : 'all comfortable');
+      // Per-CT stats grid (sorted)
+      const sorted = [...all].sort((a,b) => ((b.cpu_pct||0)+(b.mem_pct||0)) - ((a.cpu_pct||0)+(a.mem_pct||0)));
+      const el = document.getElementById('ov-ct-stats');
+      if (el) el.innerHTML = sorted.map(c => {
+        const cpuC = barColor(c.cpu_pct), memC = barColor(c.mem_pct);
+        return `<div class="ct-stat-row"><div class="ct-stat-head"><span class="ct-stat-name">CT${c.ctid} · ${esc(c.name)}</span><span class="ct-stat-num">${c.cpu_pct}% · ${c.mem_pct}%</span></div><div class="ct-stat-bars"><div class="ct-stat-bar-wrap"><span class="ct-stat-label">CPU</span><div class="ct-stat-bar-track"><div class="ct-stat-bar" style="width:${Math.min(100,c.cpu_pct)}%;background:${cpuC}"></div></div></div><div class="ct-stat-bar-wrap"><span class="ct-stat-label">RAM</span><div class="ct-stat-bar-track"><div class="ct-stat-bar" style="width:${Math.min(100,c.mem_pct)}%;background:${memC}"></div></div></div></div></div>`;
+      }).join('');
+    }
+    // Services
+    if (status) {
+      svcDots('ov-svc-row', ['ha','plex','n8n','pihole','nexus'].map(s => ({ name: s, up: status[s]==='up' })));
+    }
+    // Domains
+    if (doms) {
+      svcDots('ov-dom-row', ['call-on.dad','call-on.mom','call-on.media','call-on.shop']
+        .map(d => ({ name: d, up: (doms[d]||{}).status === 'up' })));
+    }
+    // Cloudflare aggregate
+    if (cf && cf.data && cf.data.zones) {
+      let req=0, threats=0;
+      Object.values(cf.data.zones).forEach(z => { if (!z.error) { req += z.requests_24h||0; threats += z.threats_blocked_24h||0; } });
+      setOv('ov-cf-req', req.toLocaleString());
+      setOv('ov-cf-threats', threats.toLocaleString());
+    }
+    // GA4 aggregate
+    if (ga && ga.data && ga.data.zones) {
+      let u=0, s=0, p=0;
+      Object.values(ga.data.zones).forEach(z => { if (!z.error) { u += z.users_24h||0; s += z.sessions_24h||0; p += z.pageviews_24h||0; } });
+      setOv('ov-ga-users', u.toLocaleString());
+      setOv('ov-ga-sess', s.toLocaleString());
+      setOv('ov-ga-pv', p.toLocaleString());
+    }
+    // Shop
+    if (shop && shop.data) {
+      const s = shop.data;
+      setOv('ov-shop-rev', '£' + (Number(s.revenue_7d)||0).toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2}));
+      setOv('ov-shop-orders', s.orders_7d||0);
+      setOv('ov-shop-pending', s.pending||0);
+    }
+    // Community
+    if (comm) {
+      const dad = comm.dad || {}, mom = comm.mom || {};
+      setOv('ov-comm-users', ((dad.users||0) + (dad.dads||0) + (mom.users||0) + (mom.dads||0)).toLocaleString());
+      setOv('ov-comm-topics', ((dad.topics||0) + (mom.topics||0)).toLocaleString());
+      setOv('ov-comm-msgs',   ((dad.messages||0) + (mom.contact_messages||0)).toLocaleString());
+    }
+    // n8n
+    if (social && social.data) {
+      const s = social.data;
+      const ok = s.exec_24h ? Math.round(s.exec_24h_success/s.exec_24h*100) : 0;
+      setOv('ov-n8n-exec', (s.exec_24h||0).toLocaleString());
+      setOv('ov-n8n-success', ok);
+      setOv('ov-n8n-failed', (s.exec_24h_failed||0).toLocaleString());
+    }
+    // Storage
+    if (store) {
+      const pools = parseStorage(store.data || '');
+      const pick = n => { const p = pools.find(x => x.name === n); return p ? p.pct + '%' : '—'; };
+      setOv('ov-stor-local', pick('local'));
+      setOv('ov-stor-lvm',   'lvm ' + pick('local-lvm'));
+      setOv('ov-stor-pbs',   'pbs ' + pick('pbs'));
+    }
+    // NEXUS health
+    if (health) {
+      setOv('nexus-version', health.version || '4.0');
+      setOv('nexus-memory-count', (health.memory||0) + ' msg');
+      setOv('nexus-cache-pools', (health.cache_keys ? health.cache_keys.length : 0) + ' pools');
+    }
+    setOv('ov-email-unread', '—'); // Email count would need a separate slower fetch.
+  }
+
+  // Tile click → switch tab
+  document.querySelectorAll('.ov-tile[data-tab]').forEach(t => {
+    t.style.cursor = 'pointer';
+    t.addEventListener('click', () => {
+      const tab = t.dataset.tab;
+      const btn = document.querySelector(`.nav-btn[data-dept="${tab}"]`);
+      if (btn) btn.click();
+    });
+  });
+
   // ── Shop summary ──────────────────────────────────────────────────────────
   async function loadShop() {
     const el = document.getElementById('shop-grid');
@@ -861,15 +1028,15 @@
 
   // ── Refresh ───────────────────────────────────────────────────────────────
   document.getElementById('refresh-btn').addEventListener('click', ()=>{
-    refreshStatus(); refreshHealth(); refreshInfra();
+    refreshStatus(); refreshHealth(); loadOverview();
     const active=document.querySelector('.nav-btn.active[data-dept]');
     if(active){deptLoaded[active.dataset.dept]=false; loadDept(active.dataset.dept);}
   });
 
-  async function refreshAll() { await Promise.all([refreshStatus(), refreshHealth(), refreshInfra()]); }
+  async function refreshAll() { await Promise.all([refreshStatus(), refreshHealth(), loadOverview()]); }
   refreshAll();
   setInterval(refreshAll, 30000);
-  // Pre-load nexus AI dept
+  // Pre-load nexus AI dept (overview is auto-loaded via refreshAll)
   deptLoaded['nexus'] = true;
   </script>
 </body>

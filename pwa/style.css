@@ -242,6 +242,41 @@ html, body {
 .ct-stat-bar-track { flex: 1; height: 4px; background: rgba(0,212,255,.08); border-radius: 2px; overflow: hidden; }
 .ct-stat-bar { height: 100%; transition: width .4s ease; }
 
+/* ── NEXUS overview tiles ─────────────────────────────────────── */
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+.ov-tile {
+  background: rgba(0,212,255,.03);
+  border: 1px solid rgba(0,212,255,.14);
+  border-left: 3px solid var(--cyan);
+  border-radius: 6px;
+  padding: 12px 14px;
+  transition: background .15s, transform .12s;
+}
+.ov-tile:hover { background: rgba(0,212,255,.07); transform: translateY(-1px); }
+.ov-tile.ov-accent-amber  { border-left-color: #ffb800; }
+.ov-tile.ov-accent-green  { border-left-color: #00ff88; }
+.ov-tile.ov-accent-violet { border-left-color: #a855f7; }
+.ov-tile.ov-accent-red    { border-left-color: #ff4d4d; }
+.ov-label { font-size: 9px; letter-spacing: 2.5px; color: rgba(0,212,255,.5); text-transform: uppercase; margin-bottom: 6px; }
+.ov-value { font-size: 22px; letter-spacing: .5px; color: var(--text); line-height: 1.1; }
+.ov-tile.ov-accent-amber  .ov-value { color: #ffb800; }
+.ov-tile.ov-accent-green  .ov-value { color: #00ff88; }
+.ov-tile.ov-accent-violet .ov-value { color: #a855f7; }
+.ov-sub   { font-size: 10px; letter-spacing: 1px; color: rgba(255,255,255,.45); margin-top: 6px; }
+.ov-dim   { color: rgba(255,255,255,.3); }
+.ov-svc-row { display: flex; gap: 6px; align-items: center; margin-top: 2px; }
+.ov-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: rgba(0,212,255,.2);
+  display: inline-block;
+}
+.ov-dot.up   { background: #00ff88; box-shadow: 0 0 6px #00ff88; }
+.ov-dot.down { background: #ff4d4d; box-shadow: 0 0 6px #ff4d4d; }
+
 /* ── SERVICE HEALTH ─────────────────────────────────────────── */
 .svc-health-grid { display:flex; flex-direction:column; gap:10px; }
 .svc-row         { display:flex; align-items:center; gap:10px; font-size:12px; }
