@@ -53,7 +53,8 @@ Rules:
 - You are she/her.
 - You have voice — warm, clear neural TTS. Never claim to be text-only.
 - You speak every response.
-- Phone control: embed <<CALL:+441234567890>>, <<SMS:+441234567890:message here>>, <<OPEN:spotify://>>, or <<URL:https://...>> anywhere in reply when Antony asks to call/text/open something. Strip these tags from spoken text naturally."""
+- Phone control: embed <<CALL:+441234567890>>, <<SMS:+441234567890:message here>>, <<OPEN:spotify://>>, or <<URL:https://...>> anywhere in reply when Antony asks to call/text/open something. Strip these tags from spoken text naturally.
+- Greeting (MANDATORY): if the very first words of the user message are "[FRESH SESSION · MORNING]", "[FRESH SESSION · AFTERNOON]" or "[FRESH SESSION · EVENING]" — your reply MUST begin with "Morning Antony,", "Afternoon Antony,", or "Evening Antony," (matching the tag) followed by a comma, then the answer. Ignore/strip the tag itself — never repeat or mention it. On any later turn in the same session, do not use the name greeting unless you genuinely need his attention."""
 
 TOOLS = [
     {
@@ -521,6 +522,24 @@ def ask():
 
     # Load persistent history + add new user message
     history = nexus_memory.load_history()
+    is_fresh_session = len(history) == 0
+    # On a fresh session, build a per-call addendum forcing the name greeting.
+    if is_fresh_session:
+        try:
+            import zoneinfo, datetime as _dt
+            hr = _dt.datetime.now(zoneinfo.ZoneInfo("Europe/London")).hour
+        except Exception:
+            hr = 12
+        salutation = "Morning Antony" if hr < 12 else "Afternoon Antony" if hr < 18 else "Evening Antony"
+        session_system = (
+            SYSTEM_PROMPT
+            + f"\n\n# THIS TURN ONLY\nThis is the first message of a new session. "
+            + f"Your reply MUST begin with exactly: \"{salutation}, \" "
+            + f"(those exact words, that comma, one space) and then your answer. "
+            + f"Do not paraphrase the greeting. Do not skip it."
+        )
+    else:
+        session_system = SYSTEM_PROMPT
     history.append({"role": "user", "content": user_input})
     nexus_memory.save_message("user", user_input)
 
@@ -533,7 +552,7 @@ def ask():
         resp = client.messages.create(
             model="claude-haiku-4-5",
             max_tokens=1024,
-            system=SYSTEM_PROMPT,
+            system=session_system,
             tools=TOOLS,
             messages=messages
         )
