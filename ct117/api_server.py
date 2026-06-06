@@ -1242,6 +1242,8 @@ _ADMIN_ALLOWED_ACTIONS = {
     "msg_read", "msg_delete",
     "video_approve", "video_reject",
     "email_send",
+    "topic_add", "topic_hide", "topic_unhide", "topic_delete",
+    "order_status",
 }
 
 @app.route("/api/admin/stats")

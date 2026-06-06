@@ -356,6 +356,56 @@
               </div>
               <div id="sites-users"><div class="feed-loading">Loading…</div></div>
             </div>
+            <!-- All dads -->
+            <div class="card card-wide">
+              <div class="card-title-row">
+                <div class="card-title">ALL DADS / VOLUNTEERS</div>
+                <button class="reload-btn" onclick="reloadSiteCard('dads')">↻</button>
+              </div>
+              <div id="sites-dads"><div class="feed-loading">Loading…</div></div>
+            </div>
+            <!-- Topics -->
+            <div class="card card-wide">
+              <div class="card-title-row">
+                <div class="card-title">TOPICS</div>
+                <button class="reload-btn" onclick="reloadSiteCard('topics')">↻</button>
+              </div>
+              <!-- Add new topic form -->
+              <div class="sites-topic-add" id="sites-topic-add-form" style="display:none">
+                <div class="sites-topic-add-row">
+                  <input class="sites-reply-subj" id="topic-add-icon" type="text" placeholder="📋" value="" style="width:50px;text-align:center">
+                  <input class="sites-reply-subj" id="topic-add-name" type="text" placeholder="Topic name…" style="flex:1">
+                  <select class="sites-reply-subj" id="topic-add-cat" style="flex:1"></select>
+                  <select class="sites-reply-subj" id="topic-add-demand">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                  <button class="sites-btn sites-btn-approve" onclick="addTopic()">ADD</button>
+                  <button class="sites-btn" style="border-color:rgba(0,212,255,.3);color:var(--cyan)" onclick="document.getElementById('sites-topic-add-form').style.display='none'">✕</button>
+                </div>
+              </div>
+              <div class="card-title-row" style="margin-bottom:6px">
+                <span id="sites-topics-count" class="sites-date"></span>
+                <button class="sites-btn sites-btn-approve" style="padding:3px 10px" onclick="document.getElementById('sites-topic-add-form').style.display='block'">+ ADD TOPIC</button>
+              </div>
+              <div id="sites-topics"><div class="feed-loading">Loading…</div></div>
+            </div>
+            <!-- Shop orders -->
+            <div class="card card-wide">
+              <div class="card-title-row">
+                <div class="card-title">SHOP ORDERS</div>
+                <button class="reload-btn" onclick="reloadSiteCard('orders')">↻</button>
+              </div>
+              <div id="sites-orders"><div class="feed-loading">Loading…</div></div>
+            </div>
+            <!-- Analytics -->
+            <div class="card card-wide">
+              <div class="card-title-row">
+                <div class="card-title">ANALYTICS</div>
+              </div>
+              <div id="sites-analytics"><div class="feed-loading">Loading…</div></div>
+            </div>
           </div>
         </section>
 
@@ -1056,7 +1106,7 @@
   });
 
   async function loadSites() {
-    ['sites-summary','sites-vols','sites-msgs','sites-vids','sites-reports','sites-users']
+    ['sites-summary','sites-vols','sites-msgs','sites-vids','sites-reports','sites-users','sites-dads','sites-topics','sites-orders','sites-analytics']
       .forEach(id => { const el=document.getElementById(id); if(el) el.innerHTML='<div class="feed-loading">Loading…</div>'; });
     try {
       const d = await apiFetch('/api/admin/stats?site=' + currentSite);
@@ -1079,6 +1129,10 @@
     renderSitesVids(d.pending_videos_list || []);
     renderSitesReports(d.open_reports_list || []);
     renderSitesUsers(d.recent_users || []);
+    renderSitesDads(d.all_vols || []);
+    renderSitesTopics(d.topics_list || [], d.categories_list || []);
+    renderSitesOrders(d.shop_orders || [], d);
+    renderSitesAnalytics(d);
   }
 
   function renderSitesSummary(d) {
@@ -1248,6 +1302,177 @@
           }
         </div>
       </div>`).join('');
+  }
+
+  function renderSitesDads(dads) {
+    const el = document.getElementById('sites-dads');
+    if (!el) return;
+    if (!dads.length) { el.innerHTML = '<div class="feed-empty">No volunteers</div>'; return; }
+    el.innerHTML = dads.map(v => `
+      <div class="sites-row" id="dad-row-${v.id}">
+        <div class="sites-row-main">
+          <span class="sites-name">${v.avatar_emoji||'👤'} ${esc(v.display_name||'—')}</span>
+          <span class="sites-meta">${esc(v.email||'')} · ${esc(v.location_city||'')}</span>
+          <span class="sites-meta"><span class="sites-status sites-status-${v.status||'unknown'}">${v.status||'?'}</span>${v.verified?' ✓':''}</span>
+          <span class="sites-date">${fmtDate(v.created_at)}</span>
+        </div>
+        <div class="sites-actions">
+          ${v.status==='active'
+            ? `<button class="sites-btn sites-btn-reject" onclick="siteAction('vol_status','${esc(currentSite)}',${v.id},{status:'suspended'},'dad-row-${v.id}')">SUSPEND</button>`
+            : `<button class="sites-btn sites-btn-approve" onclick="siteAction('vol_verify','${esc(currentSite)}',${v.id},{},'dad-row-${v.id}')">ACTIVATE</button>`
+          }
+          <button class="sites-btn" style="border-color:rgba(0,212,255,.3);color:var(--cyan)" onclick="prefillReply('${esc(v.email||'')}')">✉ EMAIL</button>
+          <button class="sites-btn sites-btn-reject" onclick="siteAction('vol_delete','${esc(currentSite)}',${v.id},{},'dad-row-${v.id}')">🗑</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function prefillReply(email) {
+    document.querySelector('button[data-dept="sites"]')?.click();
+    // Scroll to messages section and open a new reply to this email
+    showSiteToast('Use Messages → compose to email: ' + email);
+  }
+
+  let _sitesCategories = [];
+
+  function renderSitesTopics(topics, cats) {
+    const el = document.getElementById('sites-topics');
+    if (!el) return;
+    _sitesCategories = cats;
+    // Populate category select
+    const sel = document.getElementById('topic-add-cat');
+    if (sel && cats.length) {
+      sel.innerHTML = cats.map(c => `<option value="${c.id}">${c.icon||''} ${esc(c.name)}</option>`).join('');
+    }
+    const count = document.getElementById('sites-topics-count');
+    if (count) count.textContent = `${topics.length} topics`;
+    if (!topics.length) { el.innerHTML = '<div class="feed-empty">No topics</div>'; return; }
+    // Group by category
+    const grouped = {};
+    topics.forEach(t => {
+      const cat = t.category || 'Uncategorised';
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(t);
+    });
+    el.innerHTML = Object.entries(grouped).map(([cat, ts]) => `
+      <div class="sites-topic-group">
+        <div class="sites-topic-cat-header">${ts[0]?.cat_icon||'📁'} ${esc(cat)} <span class="sites-date">${ts.length} topics</span></div>
+        ${ts.map(t => `
+          <div class="sites-row sites-topic-row" id="topic-row-${t.id}" style="${t.is_active==0?'opacity:.5':''}">
+            <div class="sites-row-main" style="flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap">
+              <span style="font-size:18px">${t.icon||'📋'}</span>
+              <span class="sites-name" style="flex:1">${esc(t.name)}</span>
+              <span class="sites-badge sites-badge-${t.demand_level||'medium'}">${(t.demand_level||'medium').toUpperCase()}</span>
+              <span class="sites-date">${t.dad_count||0} dads</span>
+              <span class="sites-date">${t.is_active==0?'HIDDEN':'ACTIVE'}</span>
+            </div>
+            <div class="sites-actions">
+              ${t.is_active!=0
+                ? `<button class="sites-btn" style="border-color:rgba(255,170,0,.4);color:var(--amber)" onclick="siteAction('topic_hide','${esc(currentSite)}',${t.id},{},'topic-row-${t.id}')">HIDE</button>`
+                : `<button class="sites-btn sites-btn-approve" onclick="siteAction('topic_unhide','${esc(currentSite)}',${t.id},{},'topic-row-${t.id}')">SHOW</button>`
+              }
+              <button class="sites-btn sites-btn-reject" onclick="siteAction('topic_delete','${esc(currentSite)}',${t.id},{},'topic-row-${t.id}')">🗑</button>
+            </div>
+          </div>`).join('')}
+      </div>`).join('');
+  }
+
+  async function addTopic() {
+    const icon = document.getElementById('topic-add-icon')?.value?.trim() || '📋';
+    const name = document.getElementById('topic-add-name')?.value?.trim();
+    const cat  = document.getElementById('topic-add-cat')?.value;
+    const dem  = document.getElementById('topic-add-demand')?.value || 'medium';
+    if (!name || !cat) { showSiteToast('Name and category required', true); return; }
+    const btn = event.target;
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      const d = await apiFetch('/api/admin/action', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({action:'topic_add', site:currentSite, name, icon, category_id:parseInt(cat), demand:dem})
+      });
+      if (d.ok) {
+        showSiteToast('Topic added');
+        document.getElementById('topic-add-name').value='';
+        document.getElementById('topic-add-icon').value='';
+        loadSites();
+      } else {
+        showSiteToast('Error: '+(d.error||'unknown'), true);
+        btn.disabled=false; btn.textContent='ADD';
+      }
+    } catch(e) { showSiteToast('Request failed', true); btn.disabled=false; btn.textContent='ADD'; }
+  }
+
+  function renderSitesOrders(orders, d) {
+    const el = document.getElementById('sites-orders');
+    if (!el) return;
+    const totalOrders = d.shop_total_orders||0, revenue = d.shop_revenue||0, needsFul = d.shop_needs_fulfilment||0;
+    const hdr = `<div class="sites-kpi-row" style="margin-bottom:10px">
+      <div class="sites-kpi"><div class="sites-kpi-val">${totalOrders}</div><div class="sites-kpi-lbl">Total Orders</div></div>
+      <div class="sites-kpi"><div class="sites-kpi-val">£${revenue.toFixed(2)}</div><div class="sites-kpi-lbl">Revenue</div></div>
+      <div class="sites-kpi"><div class="sites-kpi-val ${needsFul>0?'sites-warn':''}">${needsFul}</div><div class="sites-kpi-lbl">Need Fulfilment</div></div>
+    </div>`;
+    if (!orders.length) { el.innerHTML = hdr+'<div class="feed-empty">No orders</div>'; return; }
+    const statusColors = {paid:'var(--amber)',processing:'var(--cyan)',fulfilled:'#00ff88',shipped:'#00ff88',delivered:'#00ff88',refunded:'var(--red)',cancelled:'var(--text-dim)',pending:'var(--text-dim)'};
+    el.innerHTML = hdr + orders.map(o => `
+      <div class="sites-row" id="order-row-${o.id}">
+        <div class="sites-row-main">
+          <span class="sites-name" style="font-family:monospace;font-size:11px">${esc(o.order_ref||'#'+o.id)}</span>
+          <span class="sites-meta">${esc(o.shipping_name||'—')} · ${esc(o.shipping_email||'')}</span>
+          <span class="sites-meta">${esc(o.items||'—')}</span>
+          <span class="sites-meta">£${parseFloat(o.total||0).toFixed(2)} · <span style="color:${statusColors[o.status]||'var(--text)'}">${(o.status||'?').toUpperCase()}</span>${o.printful_status?' · Printful: '+esc(o.printful_status):''}</span>
+          <span class="sites-date">${fmtDate(o.created_at)}</span>
+        </div>
+        <div class="sites-actions">
+          <select class="sites-reply-subj" id="ord-status-${o.id}" style="width:auto;font-size:10px;padding:3px 6px">
+            ${['paid','processing','fulfilled','shipped','delivered','refunded','cancelled'].map(s=>`<option value="${s}"${o.status===s?' selected':''}>${s}</option>`).join('')}
+          </select>
+          <button class="sites-btn sites-btn-approve" onclick="updateOrderStatus(${o.id})">UPDATE</button>
+        </div>
+      </div>`).join('');
+  }
+
+  async function updateOrderStatus(id) {
+    const sel = document.getElementById('ord-status-'+id);
+    if (!sel) return;
+    const status = sel.value;
+    const btn = event.target;
+    btn.disabled=true; btn.textContent='…';
+    try {
+      const d = await apiFetch('/api/admin/action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'order_status',site:currentSite,id,status})});
+      if (d.ok) { showSiteToast('Order updated → '+status); }
+      else { showSiteToast('Error: '+(d.error||'unknown'),true); }
+    } catch(e) { showSiteToast('Request failed',true); }
+    btn.disabled=false; btn.textContent='UPDATE';
+  }
+
+  function renderSitesAnalytics(d) {
+    const el = document.getElementById('sites-analytics');
+    if (!el) return;
+    const f = d.funnel||{};
+    const topTopics = (d.top_regions||[]);
+    const growth = d.signups_30d||[];
+    el.innerHTML = `
+      <div class="sites-kpi-row" style="margin-bottom:12px">
+        <div class="sites-kpi"><div class="sites-kpi-val">${f.registered||d.users||0}</div><div class="sites-kpi-lbl">Registered Users</div></div>
+        <div class="sites-kpi"><div class="sites-kpi-val">${f.email_verified||0}</div><div class="sites-kpi-lbl">Email Verified</div></div>
+        <div class="sites-kpi"><div class="sites-kpi-val">${f.active_users||0}</div><div class="sites-kpi-lbl">Active Users</div></div>
+        <div class="sites-kpi"><div class="sites-kpi-val">${d.active||0}</div><div class="sites-kpi-lbl">Active Volunteers</div></div>
+        <div class="sites-kpi"><div class="sites-kpi-val">${d.convos||0}</div><div class="sites-kpi-lbl">Conversations</div></div>
+        <div class="sites-kpi"><div class="sites-kpi-val">${d.topics_total||0}</div><div class="sites-kpi-lbl">Active Topics</div></div>
+      </div>
+      ${(d.top_cities||[]).length ? `
+      <div class="card-title" style="margin-bottom:6px;font-size:10px">GEOGRAPHIC SPREAD — VOLUNTEERS</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+        ${(d.top_cities||[]).map(c=>`<span class="sites-badge sites-badge-medium">${esc(c.city||c.region||'?')} <strong>${c.cnt}</strong></span>`).join('')}
+      </div>` : ''}
+      ${growth.length ? `
+      <div class="card-title" style="margin-bottom:6px;font-size:10px">USER SIGNUPS — LAST 30 DAYS</div>
+      <div style="display:flex;gap:4px;align-items:flex-end;height:50px;margin-bottom:10px">
+        ${(()=>{const max=Math.max(...growth.map(g=>g.cnt),1); return growth.map(g=>`<div title="${g.d}: ${g.cnt}" style="flex:1;background:rgba(0,212,255,.4);border-radius:2px 2px 0 0;height:${Math.round(g.cnt/max*100)}%;min-height:2px"></div>`).join('');})()}
+      </div>` : ''}
+      <div class="card-title" style="margin-bottom:6px;font-size:10px">VOLUNTEER ACTIVATION RATE</div>
+      <div class="sites-progress-bar"><div class="sites-progress-fill" style="width:${d.vol_activation_rate||0}%"></div></div>
+      <div class="sites-date" style="margin-top:3px">${d.vol_activation_rate||0}% of volunteers are active</div>`;
   }
 
   async function siteAction(action, site, id, extras, rowId) {
