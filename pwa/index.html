@@ -1050,7 +1050,8 @@
       document.querySelectorAll('.site-tab').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentSite = btn.dataset.site;
-      renderSites(_sitesData);
+      _sitesData = null;
+      loadSites();
     });
   });
 
