@@ -1241,6 +1241,7 @@ _ADMIN_ALLOWED_ACTIONS = {
     "user_status", "user_verify", "user_delete",
     "msg_read", "msg_delete",
     "video_approve", "video_reject",
+    "email_send",
 }
 
 @app.route("/api/admin/stats")

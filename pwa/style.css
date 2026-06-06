@@ -380,3 +380,21 @@ html, body {
 
 #site-toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); padding:8px 20px; background:rgba(0,255,136,.15); border:1px solid rgba(0,255,136,.4); color:#00ff88; font-family:'Courier New',monospace; font-size:11px; letter-spacing:2px; border-radius:4px; z-index:999; display:none; box-shadow:0 0 20px rgba(0,255,136,.2); }
 #site-toast.site-toast-err { background:rgba(255,85,85,.15); border-color:rgba(255,85,85,.4); color:var(--red); box-shadow:0 0 20px rgba(255,85,85,.2); }
+
+/* ── SITES MSG EXPAND / REPLY ───────────────────────────────── */
+.sites-msg-block { border-bottom:1px solid rgba(0,212,255,.07); }
+.sites-msg-block:last-child { border-bottom:none; }
+.sites-msg-block .sites-row { border-bottom:none; }
+.sites-meta-inline { font-size:10px; color:var(--text-dim); font-weight:400; }
+.sites-expand-hint { font-size:9px; letter-spacing:2px; color:rgba(0,212,255,.5); white-space:nowrap; padding:4px 6px; }
+.sites-msg-expand { padding:10px 0 14px 0; }
+.sites-msg-body { font-size:12px; line-height:1.7; color:var(--text); white-space:pre-wrap; background:rgba(0,212,255,.04); border:1px solid rgba(0,212,255,.1); border-radius:4px; padding:12px 14px; margin-bottom:12px; max-height:220px; overflow-y:auto; }
+.sites-reply-form { display:flex; flex-direction:column; gap:8px; }
+.sites-reply-meta { font-size:10px; letter-spacing:1px; color:var(--text-dim); display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px; }
+.sites-reply-label { color:rgba(0,212,255,.5); letter-spacing:2px; }
+.sites-reply-val { color:var(--text); }
+.sites-reply-subj { width:100%; padding:6px 10px; background:rgba(0,212,255,.06); border:1px solid rgba(0,212,255,.2); border-radius:3px; color:var(--text); font-family:'Courier New',monospace; font-size:12px; outline:none; }
+.sites-reply-subj:focus { border-color:rgba(0,212,255,.5); }
+.sites-reply-textarea { width:100%; padding:8px 10px; background:rgba(0,212,255,.06); border:1px solid rgba(0,212,255,.2); border-radius:3px; color:var(--text); font-family:'Courier New',monospace; font-size:12px; outline:none; resize:vertical; }
+.sites-reply-textarea:focus { border-color:rgba(0,212,255,.5); }
+.sites-reply-actions { display:flex; gap:8px; flex-wrap:wrap; }

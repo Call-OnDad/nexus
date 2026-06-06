@@ -1120,19 +1120,80 @@
     const el = document.getElementById('sites-msgs');
     if (!el) return;
     if (!msgs.length) { el.innerHTML = '<div class="feed-empty">No unread messages</div>'; return; }
-    el.innerHTML = msgs.map(m => `
-      <div class="sites-row" id="msg-row-${m.id}">
-        <div class="sites-row-main">
-          <span class="sites-name">${esc(m.name||m.name_enc||'—')}</span>
-          <span class="sites-meta">${esc(m.subject||'')}</span>
-          <span class="sites-meta sites-preview">${esc((m.message||m.message_enc||'').substring(0,100))}…</span>
-          <span class="sites-date">${fmtDate(m.created_at)}</span>
+    el.innerHTML = msgs.map(m => {
+      const msgId = m.id;
+      const senderEmail = esc(m.email||'');
+      const senderName  = esc(m.name||'—');
+      const subject     = esc(m.subject||'');
+      const body        = esc(m.message||'');
+      const replySubj   = esc('Re: ' + (m.subject||''));
+      const site        = currentSite;
+      return `
+      <div class="sites-msg-block" id="msg-row-${msgId}">
+        <div class="sites-row" onclick="toggleMsg(${msgId})" style="cursor:pointer">
+          <div class="sites-row-main">
+            <span class="sites-name">${senderName} <span class="sites-meta-inline">&lt;${senderEmail}&gt;</span></span>
+            <span class="sites-meta">${subject}</span>
+            <span class="sites-date">${fmtDate(m.created_at)}</span>
+          </div>
+          <div class="sites-actions">
+            <span class="sites-expand-hint" id="hint-${msgId}">▶ VIEW</span>
+          </div>
         </div>
-        <div class="sites-actions">
-          <button class="sites-btn sites-btn-approve" onclick="siteAction('msg_read','${esc(currentSite)}',${m.id},{},'msg-row-${m.id}')">MARK READ</button>
-          <button class="sites-btn sites-btn-reject"  onclick="siteAction('msg_delete','${esc(currentSite)}',${m.id},{},'msg-row-${m.id}')">DELETE</button>
+        <div class="sites-msg-expand" id="expand-${msgId}" style="display:none">
+          <div class="sites-msg-body">${body.replace(/\n/g,'<br>')}</div>
+          <div class="sites-reply-form">
+            <div class="sites-reply-meta">
+              <span class="sites-reply-label">TO</span>
+              <span class="sites-reply-val">${senderEmail}</span>
+              <span class="sites-reply-label" style="margin-left:12px">FROM</span>
+              <span class="sites-reply-val">contact@call-on.${site}</span>
+            </div>
+            <input class="sites-reply-subj" id="subj-${msgId}" type="text" value="${replySubj}" placeholder="Subject…">
+            <textarea class="sites-reply-textarea" id="reply-${msgId}" placeholder="Write your reply…" rows="5"></textarea>
+            <div class="sites-reply-actions">
+              <button class="sites-btn sites-btn-approve" onclick="sendMsgReply(${msgId},'${senderEmail}','${site}')">SEND REPLY</button>
+              <button class="sites-btn" style="border-color:rgba(0,212,255,.3);color:var(--cyan)" onclick="siteAction('msg_read','${site}',${msgId},{},'msg-row-${msgId}')">MARK READ</button>
+              <button class="sites-btn sites-btn-reject" onclick="siteAction('msg_delete','${site}',${msgId},{},'msg-row-${msgId}')">DELETE</button>
+            </div>
+          </div>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
+  }
+
+  function toggleMsg(id) {
+    const expand = document.getElementById('expand-'+id);
+    const hint   = document.getElementById('hint-'+id);
+    if (!expand) return;
+    const open = expand.style.display === 'none';
+    expand.style.display = open ? 'block' : 'none';
+    hint.textContent = open ? '▼ CLOSE' : '▶ VIEW';
+  }
+
+  async function sendMsgReply(msgId, toEmail, site) {
+    const subj = document.getElementById('subj-'+msgId)?.value?.trim();
+    const body = document.getElementById('reply-'+msgId)?.value?.trim();
+    if (!subj || !body) { showSiteToast('Subject and message required', true); return; }
+    const btn = event.target;
+    btn.disabled = true; btn.textContent = 'SENDING…';
+    try {
+      const d = await apiFetch('/api/admin/action', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({action:'email_send', site, from_domain: site, to: toEmail, subject: subj, body})
+      });
+      if (d.ok) {
+        showSiteToast('Reply sent to ' + toEmail);
+        siteAction('msg_read', site, msgId, {}, 'msg-row-'+msgId);
+      } else {
+        showSiteToast('Send failed: ' + (d.error||'unknown'), true);
+        btn.disabled = false; btn.textContent = 'SEND REPLY';
+      }
+    } catch(e) {
+      showSiteToast('Request failed', true);
+      btn.disabled = false; btn.textContent = 'SEND REPLY';
+    }
   }
 
   function renderSitesVids(vids) {
