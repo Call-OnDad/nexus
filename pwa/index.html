@@ -49,6 +49,7 @@
         <button class="nav-btn"        data-dept="marketing" aria-pressed="false"><span class="nav-icon">◉</span><span class="nav-label">MARKETING</span></button>
         <button class="nav-btn"        data-dept="business"  aria-pressed="false"><span class="nav-icon">◆</span><span class="nav-label">BUSINESS</span></button>
         <button class="nav-btn"        data-dept="community" aria-pressed="false"><span class="nav-icon">◎</span><span class="nav-label">COMMUNITY</span></button>
+        <button class="nav-btn"        data-dept="sites"     aria-pressed="false"><span class="nav-icon">◫</span><span class="nav-label">SITES</span></button>
         <button class="nav-btn"        data-dept="security"  aria-pressed="false"><span class="nav-icon">⬣</span><span class="nav-label">SECURITY</span></button>
         <button class="nav-btn"        data-dept="email"     aria-pressed="false"><span class="nav-icon">✉</span><span class="nav-label">EMAIL</span></button>
         <button class="nav-btn"        data-dept="manager"   aria-pressed="false"><span class="nav-icon">◈</span><span class="nav-label">MANAGER</span></button>
@@ -299,6 +300,65 @@
           </div>
         </section>
 
+        <!-- SITES ─────────────────────────────────── -->
+        <section class="dept-panel hidden" id="dept-sites">
+          <div class="panel-header">
+            <h2 class="panel-title" style="--accent:var(--cyan)">◫ SITES</h2>
+            <span class="panel-sub">call-on.dad · call-on.mom · administration</span>
+          </div>
+          <div class="panel-grid">
+            <!-- Site switcher -->
+            <div class="card card-full" style="padding:0.6rem 1rem;">
+              <div class="site-switcher">
+                <button class="site-tab active" data-site="dad">call-on.dad</button>
+                <button class="site-tab" data-site="mom">call-on.mom</button>
+              </div>
+            </div>
+            <!-- Summary strip -->
+            <div class="card card-full" id="sites-summary"><div class="feed-loading">Loading…</div></div>
+            <!-- Pending volunteers -->
+            <div class="card card-wide">
+              <div class="card-title-row">
+                <div class="card-title">PENDING VOLUNTEERS</div>
+                <button class="reload-btn" id="sites-reload-vols" onclick="reloadSiteCard('vols')">↻</button>
+              </div>
+              <div id="sites-vols"><div class="feed-loading">Loading…</div></div>
+            </div>
+            <!-- Unread messages -->
+            <div class="card card-wide">
+              <div class="card-title-row">
+                <div class="card-title">UNREAD CONTACT MESSAGES</div>
+                <button class="reload-btn" onclick="reloadSiteCard('msgs')">↻</button>
+              </div>
+              <div id="sites-msgs"><div class="feed-loading">Loading…</div></div>
+            </div>
+            <!-- Pending videos -->
+            <div class="card card-wide">
+              <div class="card-title-row">
+                <div class="card-title">PENDING VIDEOS</div>
+                <button class="reload-btn" onclick="reloadSiteCard('vids')">↻</button>
+              </div>
+              <div id="sites-vids"><div class="feed-loading">Loading…</div></div>
+            </div>
+            <!-- Open reports -->
+            <div class="card card-wide">
+              <div class="card-title-row">
+                <div class="card-title">OPEN REPORTS</div>
+                <button class="reload-btn" onclick="reloadSiteCard('reports')">↻</button>
+              </div>
+              <div id="sites-reports"><div class="feed-loading">Loading…</div></div>
+            </div>
+            <!-- Recent users -->
+            <div class="card card-wide">
+              <div class="card-title-row">
+                <div class="card-title">RECENT USERS</div>
+                <button class="reload-btn" onclick="reloadSiteCard('users')">↻</button>
+              </div>
+              <div id="sites-users"><div class="feed-loading">Loading…</div></div>
+            </div>
+          </div>
+        </section>
+
         <!-- SECURITY ──────────────────────────────── -->
         <section class="dept-panel hidden" id="dept-security">
           <div class="panel-header">
@@ -486,8 +546,8 @@
   });
 
   // ── Fetch helper ──────────────────────────────────────────────────────────
-  async function apiFetch(path) {
-    const r = await fetch(API + path, {signal: AbortSignal.timeout(20000)});
+  async function apiFetch(path, opts={}) {
+    const r = await fetch(API + path, {signal: AbortSignal.timeout(20000), ...opts});
     return r.json();
   }
 
@@ -975,7 +1035,202 @@
       case 'content':
         loadDiscordFeed('content','feed-content-page');
         break;
+      case 'sites':
+        loadSites();
+        break;
     }
+  }
+
+  // ── SITES admin ───────────────────────────────────────────────────────────
+  let currentSite = 'dad';
+  let _sitesData   = null;
+
+  document.querySelectorAll('.site-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.site-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentSite = btn.dataset.site;
+      renderSites(_sitesData);
+    });
+  });
+
+  async function loadSites() {
+    ['sites-summary','sites-vols','sites-msgs','sites-vids','sites-reports','sites-users']
+      .forEach(id => { const el=document.getElementById(id); if(el) el.innerHTML='<div class="feed-loading">Loading…</div>'; });
+    try {
+      const d = await apiFetch('/api/admin/stats?site=' + currentSite);
+      _sitesData = d;
+      renderSites(d);
+    } catch(e) {
+      document.getElementById('sites-summary').innerHTML = `<div class="feed-error">Error: ${esc(String(e))}</div>`;
+    }
+  }
+
+  function reloadSiteCard(card) {
+    loadSites();
+  }
+
+  function renderSites(d) {
+    if (!d) return;
+    renderSitesSummary(d);
+    renderSitesVols(d.pending_vols || []);
+    renderSitesMsgs(d.unread_messages || []);
+    renderSitesVids(d.pending_videos_list || []);
+    renderSitesReports(d.open_reports_list || []);
+    renderSitesUsers(d.recent_users || []);
+  }
+
+  function renderSitesSummary(d) {
+    const el = document.getElementById('sites-summary');
+    if (!el) return;
+    const site = currentSite;
+    el.innerHTML = `
+      <div class="sites-kpi-row">
+        <div class="sites-kpi"><div class="sites-kpi-val ${(d.pending||0)>0?'sites-warn':''}">${d.pending||0}</div><div class="sites-kpi-lbl">Pending Volunteers</div></div>
+        <div class="sites-kpi"><div class="sites-kpi-val ${(d.pending_videos||0)>0?'sites-warn':''}">${d.pending_videos||0}</div><div class="sites-kpi-lbl">Pending Videos</div></div>
+        <div class="sites-kpi"><div class="sites-kpi-val ${(d.open_reports||0)>0?'sites-warn':''}">${d.open_reports||0}</div><div class="sites-kpi-lbl">Open Reports</div></div>
+        <div class="sites-kpi"><div class="sites-kpi-val ${(d.unread_msgs||0)>0?'sites-warn':''}">${d.unread_msgs||0}</div><div class="sites-kpi-lbl">Unread Messages</div></div>
+        <div class="sites-kpi"><div class="sites-kpi-val">${d.volunteers||0}</div><div class="sites-kpi-lbl">Total Volunteers</div></div>
+        <div class="sites-kpi"><div class="sites-kpi-val">${d.users||0}</div><div class="sites-kpi-lbl">Total Users</div></div>
+        <div class="sites-kpi"><div class="sites-kpi-val">${d.users_today||0}</div><div class="sites-kpi-lbl">New Today</div></div>
+        <div class="sites-kpi"><div class="sites-kpi-val">${d.convos||0}</div><div class="sites-kpi-lbl">Conversations</div></div>
+      </div>`;
+  }
+
+  function renderSitesVols(vols) {
+    const el = document.getElementById('sites-vols');
+    if (!el) return;
+    if (!vols.length) { el.innerHTML = '<div class="feed-empty">No pending volunteers</div>'; return; }
+    el.innerHTML = vols.map(v => `
+      <div class="sites-row" id="vol-row-${v.id}">
+        <div class="sites-row-main">
+          <span class="sites-name">${esc(v.display_name||'—')}</span>
+          <span class="sites-meta">${esc(v.location_city||'')}${v.location_region?' · '+esc(v.location_region):''}</span>
+          <span class="sites-meta">${esc(v.email||v.email_enc||'')}</span>
+          <span class="sites-date">${fmtDate(v.created_at)}</span>
+        </div>
+        <div class="sites-actions">
+          <button class="sites-btn sites-btn-approve" onclick="siteAction('vol_verify','${esc(currentSite)}',${v.id},{},'vol-row-${v.id}')">APPROVE</button>
+          <button class="sites-btn sites-btn-reject"  onclick="siteAction('vol_status','${esc(currentSite)}',${v.id},{status:'suspended'},'vol-row-${v.id}')">REJECT</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function renderSitesMsgs(msgs) {
+    const el = document.getElementById('sites-msgs');
+    if (!el) return;
+    if (!msgs.length) { el.innerHTML = '<div class="feed-empty">No unread messages</div>'; return; }
+    el.innerHTML = msgs.map(m => `
+      <div class="sites-row" id="msg-row-${m.id}">
+        <div class="sites-row-main">
+          <span class="sites-name">${esc(m.name||m.name_enc||'—')}</span>
+          <span class="sites-meta">${esc(m.subject||'')}</span>
+          <span class="sites-meta sites-preview">${esc((m.message||m.message_enc||'').substring(0,100))}…</span>
+          <span class="sites-date">${fmtDate(m.created_at)}</span>
+        </div>
+        <div class="sites-actions">
+          <button class="sites-btn sites-btn-approve" onclick="siteAction('msg_read','${esc(currentSite)}',${m.id},{},'msg-row-${m.id}')">MARK READ</button>
+          <button class="sites-btn sites-btn-reject"  onclick="siteAction('msg_delete','${esc(currentSite)}',${m.id},{},'msg-row-${m.id}')">DELETE</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function renderSitesVids(vids) {
+    const el = document.getElementById('sites-vids');
+    if (!el) return;
+    if (!vids.length) { el.innerHTML = '<div class="feed-empty">No pending videos</div>'; return; }
+    el.innerHTML = vids.map(v => `
+      <div class="sites-row" id="vid-row-${v.id}">
+        <div class="sites-row-main">
+          <span class="sites-name">${esc(v.title||'Untitled')}</span>
+          <span class="sites-meta">${esc(v.filename||'')}</span>
+          <span class="sites-date">${fmtDate(v.created_at)}</span>
+        </div>
+        <div class="sites-actions">
+          <button class="sites-btn sites-btn-approve" onclick="siteAction('video_approve','${esc(currentSite)}',${v.id},{},'vid-row-${v.id}')">APPROVE</button>
+          <button class="sites-btn sites-btn-reject"  onclick="siteAction('video_reject','${esc(currentSite)}',${v.id},{reason:'Does not meet guidelines'},'vid-row-${v.id}')">REJECT</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function renderSitesReports(reports) {
+    const el = document.getElementById('sites-reports');
+    if (!el) return;
+    if (!reports.length) { el.innerHTML = '<div class="feed-empty">No open reports</div>'; return; }
+    el.innerHTML = reports.map(r => `
+      <div class="sites-row">
+        <div class="sites-row-main">
+          <span class="sites-meta">Reporter #${r.reporter_id} → Reported #${r.reported_id}</span>
+          <span class="sites-name">${esc(r.reason||'—')}</span>
+          <span class="sites-date">${fmtDate(r.created_at)}</span>
+        </div>
+      </div>`).join('');
+  }
+
+  function renderSitesUsers(users) {
+    const el = document.getElementById('sites-users');
+    if (!el) return;
+    if (!users.length) { el.innerHTML = '<div class="feed-empty">No users</div>'; return; }
+    el.innerHTML = users.map(u => `
+      <div class="sites-row" id="usr-row-${u.id}">
+        <div class="sites-row-main">
+          <span class="sites-name">${esc(u.display_name||'—')}</span>
+          <span class="sites-meta">${esc(u.email||u.email_enc||'')}</span>
+          <span class="sites-meta"><span class="sites-status sites-status-${u.status||'unknown'}">${u.status||'?'}</span>${u.email_verified?'  ✓ verified':''}</span>
+          <span class="sites-date">${fmtDate(u.created_at)}</span>
+        </div>
+        <div class="sites-actions">
+          ${u.status==='active'
+            ? `<button class="sites-btn sites-btn-reject" onclick="siteAction('user_status','${esc(currentSite)}',${u.id},{status:'suspended'},'usr-row-${u.id}')">SUSPEND</button>`
+            : `<button class="sites-btn sites-btn-approve" onclick="siteAction('user_status','${esc(currentSite)}',${u.id},{status:'active'},'usr-row-${u.id}')">ACTIVATE</button>`
+          }
+        </div>
+      </div>`).join('');
+  }
+
+  async function siteAction(action, site, id, extras, rowId) {
+    const btn = event.target;
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      const d = await apiFetch('/api/admin/action', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({action, site, id, ...extras})
+      });
+      if (d.ok) {
+        const row = document.getElementById(rowId);
+        if (row) { row.style.opacity='0.4'; row.style.pointerEvents='none'; }
+        showSiteToast(d.msg || 'Done');
+      } else {
+        showSiteToast('Error: ' + (d.error||'unknown'), true);
+        btn.disabled = false; btn.textContent = action.includes('verify')||action.includes('approve') ? 'APPROVE' : 'REJECT';
+      }
+    } catch(e) {
+      showSiteToast('Request failed', true);
+      btn.disabled = false;
+    }
+  }
+
+  function showSiteToast(msg, isErr=false) {
+    let t = document.getElementById('site-toast');
+    if (!t) { t = document.createElement('div'); t.id='site-toast'; document.body.appendChild(t); }
+    t.textContent = msg;
+    t.className = 'site-toast' + (isErr ? ' site-toast-err' : '');
+    t.style.display = 'block';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.display='none'; }, 3000);
+  }
+
+  function fmtDate(s) {
+    if (!s) return '';
+    const d = new Date(s.replace(' ','T'));
+    if (isNaN(d)) return s;
+    const now = new Date();
+    const diff = Math.floor((now - d) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    return Math.floor(diff/86400) + 'd ago';
   }
 
   // ── NEXUS Chat ────────────────────────────────────────────────────────────

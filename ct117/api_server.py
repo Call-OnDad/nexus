@@ -1231,6 +1231,61 @@ def community_stats():
     return jsonify(stats if stats else {"error": "No data returned — check CT102 mysql access"})
 
 
+# ── Site admin proxy (stats.php / actions.php on CT500) ───────────────────────
+
+CT500_ADMIN = "https://call-on.dad"
+STATS_KEY   = os.environ.get("STATS_KEY", "")
+
+_ADMIN_ALLOWED_ACTIONS = {
+    "vol_verify", "vol_status", "vol_delete",
+    "user_status", "user_verify", "user_delete",
+    "msg_read", "msg_delete",
+    "video_approve", "video_reject",
+}
+
+@app.route("/api/admin/stats")
+def admin_stats():
+    site = request.args.get("site", "dad")
+    if site not in ("dad", "mom"):
+        return jsonify({"error": "invalid site"}), 400
+    try:
+        req = urllib.request.Request(
+            f"{CT500_ADMIN}/stats.php",
+            headers={"X-Stats-Key": STATS_KEY, "User-Agent": "NEXUS/4.0"}
+        )
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.loads(r.read())
+        return jsonify(data.get(site, {}))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 503
+
+@app.route("/api/admin/action", methods=["POST"])
+def admin_action():
+    body = request.get_json(silent=True) or {}
+    action = body.get("action", "")
+    if action not in _ADMIN_ALLOWED_ACTIONS:
+        return jsonify({"ok": False, "error": f"Unknown action: {action}"}), 400
+    try:
+        payload = json.dumps(body).encode()
+        req = urllib.request.Request(
+            f"{CT500_ADMIN}/actions.php",
+            data=payload,
+            headers={
+                "X-Stats-Key": STATS_KEY,
+                "Content-Type": "application/json",
+                "User-Agent": "NEXUS/4.0",
+            }
+        )
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = json.loads(r.read())
+        return jsonify(data)
+    except urllib.error.HTTPError as e:
+        body_txt = e.read().decode(errors="replace")[:200]
+        return jsonify({"ok": False, "error": f"HTTP {e.code}: {body_txt}"}), 502
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 503
+
+
 # ── Domain ping ────────────────────────────────────────────────────────────────
 
 def _check_domain(domain):

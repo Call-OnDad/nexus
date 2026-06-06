@@ -345,3 +345,38 @@ html, body {
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:rgba(0,212,255,.25); border-radius:2px; }
 ::-webkit-scrollbar-thumb:hover { background:rgba(0,212,255,.45); }
+
+/* ── SITES ADMIN ────────────────────────────────────────────── */
+.site-switcher { display:flex; gap:8px; }
+.site-tab { padding:5px 16px; font-family:'Courier New',monospace; font-size:11px; letter-spacing:2px; text-transform:uppercase; background:rgba(0,212,255,.06); border:1px solid rgba(0,212,255,.25); color:rgba(0,212,255,.6); border-radius:3px; cursor:pointer; transition:all .2s; }
+.site-tab:hover { background:rgba(0,212,255,.12); color:var(--cyan); }
+.site-tab.active { background:rgba(0,212,255,.18); border-color:var(--cyan); color:var(--cyan); box-shadow:0 0 10px rgba(0,212,255,.2); }
+
+.sites-kpi-row { display:flex; flex-wrap:wrap; gap:10px; }
+.sites-kpi { flex:1 1 100px; background:rgba(0,212,255,.04); border:1px solid rgba(0,212,255,.12); border-radius:4px; padding:10px 12px; text-align:center; }
+.sites-kpi-val { font-size:22px; font-weight:700; color:var(--cyan); letter-spacing:1px; }
+.sites-kpi-val.sites-warn { color:var(--amber); text-shadow:0 0 8px rgba(255,170,0,.5); }
+.sites-kpi-lbl { font-size:9px; letter-spacing:2px; color:var(--text-dim); margin-top:3px; text-transform:uppercase; }
+
+.sites-row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid rgba(0,212,255,.07); transition:opacity .3s; }
+.sites-row:last-child { border-bottom:none; }
+.sites-row-main { display:flex; flex-direction:column; gap:3px; flex:1; min-width:0; }
+.sites-name { font-size:12px; color:var(--text); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sites-meta { font-size:10px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sites-preview { white-space:normal; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.sites-date { font-size:9px; color:rgba(0,212,255,.4); letter-spacing:1px; }
+.sites-actions { display:flex; gap:6px; flex-shrink:0; padding-top:2px; }
+.sites-btn { padding:4px 10px; font-family:'Courier New',monospace; font-size:10px; letter-spacing:1px; border-radius:3px; cursor:pointer; border:1px solid; transition:all .2s; }
+.sites-btn:disabled { opacity:.4; cursor:default; }
+.sites-btn-approve { background:rgba(0,255,136,.08); border-color:rgba(0,255,136,.4); color:#00ff88; }
+.sites-btn-approve:hover:not(:disabled) { background:rgba(0,255,136,.18); }
+.sites-btn-reject  { background:rgba(255,85,85,.08); border-color:rgba(255,85,85,.35); color:var(--red); }
+.sites-btn-reject:hover:not(:disabled)  { background:rgba(255,85,85,.18); }
+
+.sites-status { font-size:9px; letter-spacing:1px; padding:1px 5px; border-radius:2px; }
+.sites-status-active    { background:rgba(0,255,136,.12); color:#00ff88; }
+.sites-status-pending   { background:rgba(255,170,0,.12); color:var(--amber); }
+.sites-status-suspended { background:rgba(255,85,85,.12); color:var(--red); }
+
+#site-toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); padding:8px 20px; background:rgba(0,255,136,.15); border:1px solid rgba(0,255,136,.4); color:#00ff88; font-family:'Courier New',monospace; font-size:11px; letter-spacing:2px; border-radius:4px; z-index:999; display:none; box-shadow:0 0 20px rgba(0,255,136,.2); }
+#site-toast.site-toast-err { background:rgba(255,85,85,.15); border-color:rgba(255,85,85,.4); color:var(--red); box-shadow:0 0 20px rgba(255,85,85,.2); }
